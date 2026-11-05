@@ -175,7 +175,7 @@ Everything below was actually run (logs in [`docs/verification/`](docs/verificat
 | Same suite + live tests against **real ROS 2 Jazzy + rosbridge_server + turtlesim** in a Blaxel sandbox (`scripts/blaxel_e2e.py`) | **85 passed**, 1 skipped (the dashboard-API test module needs fastapi, absent in the sandbox) — incl. real `Image` + `CompressedImage` snapshots, drive/stop, over-speed and geofence blocks, allowlists, e-stop latch, closed-loop drive to the cone |
 | `hermes plugins validate <clone> --install-deps` | Validation passed (all checks ✓, security scan "safe") |
 | `hermes plugins doctor <installed>` | OK: discovery, manifest, import, registration — 9 tools, 1 hook |
-| Dashboard API under the real `hermes dashboard` | `GET /api/plugins/hermes-ros/state` → 401 without the session token, 200 with it (pose, limits, blocked calls); tab JS syntax-checked, **not visually screenshotted** |
+| Dashboard API under the real `hermes dashboard` | `GET /api/plugins/hermes-ros/state` → 401 without the session token, 200 with it (pose, limits, blocked calls); tab rendered in a real browser (camera frame, pose, limits and blocked-call log all render, 0 console errors) |
 | `hermes plugins install arcabotai/hermes-ros` + `enable` in a throwaway `HERMES_HOME`, then a scripted `hermes chat` turn against the mock | agent snapshotted, was refused at 3 m/s / 10 s (logged in `blocked.jsonl`), retried within limits |
 
 Run the tests yourself: `pip install -r requirements-dev.txt && cd tests && python -m pytest`
