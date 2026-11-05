@@ -1,0 +1,22 @@
+# Add to ~/.hermes/config.yaml to drive the docker-compose turtlesim demo (then: hermes plugins enable hermes-ros)
+plugins:
+  entries:
+    hermes-ros:
+      settings:
+        backend: rosbridge
+        rosbridge: {host: localhost, port: 9090}
+        topics:
+          cmd_vel: /turtle1/cmd_vel
+          cmd_vel_type: geometry_msgs/msg/Twist
+          odom: /turtle1/pose
+          odom_type: turtlesim/msg/Pose
+          camera: /camera/image_raw
+        safety:
+          max_linear_mps: 1.0        # turtlesim units/s
+          max_angular_rps: 1.5
+          max_duration_s: 4.0
+          over_limit_action: block
+          geofence: {enabled: true, x_min: 1.0, x_max: 10.0, y_min: 1.0, y_max: 10.0}
+          write_allowlist:
+            topics: ["/turtle1/cmd_vel"]
+            services: ["/turtle1/teleport_absolute"]

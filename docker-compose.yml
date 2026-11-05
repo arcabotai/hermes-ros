@@ -1,0 +1,9 @@
+# ROS 2 demo robot for hermes-ros:  docker compose up --build   ->  rosbridge on ws://localhost:9090
+services:
+  ros:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - "9090:9090"
+    restart: unless-stopped

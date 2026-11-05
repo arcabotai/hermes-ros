@@ -181,8 +181,10 @@ def _ray_wall(x: float, y: float, ang: float, hx: float, hy: float) -> Tuple[flo
 
 def render_forward(x: float, y: float, yaw: float, half_x: float, half_y: float,
                    cones: Sequence[Tuple[float, float]], width: int = 320, height: int = 240,
-                   hfov: float = 1.5, cam_height: float = 0.3) -> bytes:
-    """Render a forward-looking camera view of the arena as PNG bytes (software raycaster)."""
+                   hfov: float = 1.5, cam_height: float = 0.3, raw_rgb: bool = False):
+    """Render a forward-looking camera view of the arena (software raycaster).
+
+    Returns PNG bytes, or the raw ``rgb8`` pixel buffer when ``raw_rgb`` is true (used by the ROS demo camera node)."""
     horizon = height // 2
     f = (width / 2) / math.tan(hfov / 2)
     buf = bytearray(width * height * 3)
@@ -238,7 +240,7 @@ def render_forward(x: float, y: float, yaw: float, half_x: float, half_y: float,
                 if depth[col] >= perp - 0.05:  # not hidden behind a nearer wall
                     i = (row * width + col) * 3
                     buf[i:i + 3] = cb
-    return encode_png(width, height, bytes(buf))
+    return bytes(buf) if raw_rgb else encode_png(width, height, bytes(buf))
 
 
 def _disc(buf: bytearray, w: int, h: int, cx: float, cy: float, r: float, colour: RGB) -> None:
