@@ -150,6 +150,7 @@ def make_handlers(rt: Runtime) -> Dict[str, Callable[..., str]]:
         before = _result_pose("before")
         run = _run_timed(rt, topic, msg_type, _twist_for(rt, linear, angular), duration, 10.0, True)
         after = _result_pose("after")
+        rt.record_pose(after)
         disp = None
         if before and after:
             disp = round(math.hypot(after["x"] - before["x"], after["y"] - before["y"]), 3)
@@ -179,6 +180,7 @@ def make_handlers(rt: Runtime) -> Dict[str, Callable[..., str]]:
 
     def ros_get_pose(a: Dict[str, Any]) -> str:
         pose = rt.backend().get_pose(a.get("topic") or None, None, _as_float(a.get("timeout_s"), 5.0))
+        rt.record_pose(pose)
         return _ok(pose=pose)
 
     def ros_camera_snapshot(a: Dict[str, Any]) -> str:

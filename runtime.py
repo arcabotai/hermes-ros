@@ -1,8 +1,11 @@
 """Plugin runtime: settings, backend lifecycle, interlock, data directory. One instance per plugin load."""
 from __future__ import annotations
 
+import json
 import logging
+import os
 import tempfile
+import time
 import threading
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
@@ -67,6 +70,18 @@ class Runtime:
             return self.backend().latest_pose()
         except BackendError:
             return None
+
+    def record_pose(self, pose: Optional[Dict[str, Any]]) -> None:
+        """Remember the latest pose in ``last_pose.json`` so the dashboard tab (a separate process) can show it."""
+        if not pose:
+            return
+        try:
+            path = self.data_dir / "last_pose.json"
+            tmp = path.with_suffix(".tmp")
+            tmp.write_text(json.dumps({"pose": pose, "ts": time.time(), "backend": self.settings["backend"]}))
+            os.replace(tmp, path)
+        except Exception:
+            pass  # purely informational
 
     def shutdown(self) -> None:
         with self._lock:

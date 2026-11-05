@@ -1,0 +1,13 @@
+.hros-grid { display: grid; gap: 1rem; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+@media (max-width: 900px) { .hros-grid { grid-template-columns: 1fr; } }
+.hros-cam { width: 100%; image-rendering: pixelated; border-radius: 0.5rem; background: #111; min-height: 180px; display: block; }
+.hros-kv { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 0.75rem; font-size: 0.85rem; }
+.hros-kv dt { opacity: 0.6; }
+.hros-kv dd { margin: 0; font-variant-numeric: tabular-nums; }
+.hros-banner { padding: 0.5rem 0.75rem; border-radius: 0.5rem; font-weight: 600; font-size: 0.9rem; }
+.hros-banner.ok { background: rgba(34, 160, 90, 0.15); color: #22a05a; }
+.hros-banner.bad { background: rgba(220, 38, 38, 0.18); color: #dc2626; }
+.hros-log { font-size: 0.78rem; display: grid; gap: 0.4rem; max-height: 22rem; overflow: auto; }
+.hros-log > div { border-left: 3px solid #dc2626; padding-left: 0.5rem; }
+.hros-rule { font-family: ui-monospace, monospace; font-weight: 600; }
+.hros-muted { opacity: 0.6; }

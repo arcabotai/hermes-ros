@@ -1,0 +1,11 @@
+{
+  "name": "hermes-ros",
+  "label": "Robot",
+  "description": "Live camera frame, pose, safety limits and blocked-call log for the hermes-ros robot plugin.",
+  "icon": "Eye",
+  "version": "0.1.0",
+  "tab": { "path": "/robot", "position": "after:skills" },
+  "entry": "dist/index.js",
+  "css": "dist/style.css",
+  "api": "plugin_api.py"
+}
