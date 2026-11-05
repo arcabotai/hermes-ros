@@ -11,5 +11,5 @@ ros2 run turtlesim turtlesim_node & pids+=($!)
 ros2 launch rosbridge_server rosbridge_websocket_launch.xml & pids+=($!)
 sleep 3
 python3 "$HERE/fake_camera.py" & pids+=($!)
-echo "demo robot up: rosbridge on ws://0.0.0.0:9090 (turtlesim + /camera/image_raw)"
+echo "demo robot up: rosbridge on ws://<this-host>:9090 (turtlesim + /camera/image_raw)"
 wait -n
