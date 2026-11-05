@@ -1,26 +1,47 @@
-# hermes-ros — 90-second demo storyboard
+# hermes-ros — under-90-second demo storyboard
 
-Target: **85 s**, screen capture of one terminal (`hermes chat -t ros,vision`) next to the Robot dashboard tab
-(`hermes dashboard`). Backend: the built-in mock robot (identical tool surface to real ROS 2). Voice-over in plain
-English, no music needed. Every beat below was run for real (see `demo/mock_demo.py` and the transcripts in
-`docs/verification/`).
+Two recordings. Both must say, out loud, that the robot is **simulated** and that the interlock covers **plugin tools only**.
 
-Pre-roll setup (off camera): `hermes plugins install arcabotai/hermes-ros` + `hermes plugins enable hermes-ros`;
-config `plugins.entries.hermes-ros.settings.safety.geofence.enabled: true`.
+Target length: **under 90 seconds** of picture. No music required. Do not claim this is a certified safety system, a sandbox, or a physical robot.
 
-| t (s) | On screen | Voice-over / action |
+## A. Hermes chat (needs Hermes installed — coordinator records this)
+
+Pre-roll, off camera:
+
+```bash
+hermes plugins install arcabotai/hermes-ros
+hermes plugins enable hermes-ros
+```
+
+Leave the default `backend: mock`. Optional: `plugins.entries.hermes-ros.settings.safety.geofence.enabled: true`.
+Open one terminal on `hermes chat -t ros,vision` and, beside it, the Robot tab in `hermes dashboard`.
+The dashboard is read-only. Clear a latched e-stop with `/ros clear`, not from the page.
+
+| t (s) | On screen | Say / do |
 |---|---|---|
-| 0–6 | Title card: **hermes-ros — a Hermes agent that drives robots, with a safety interlock the model can't talk past.** Then the terminal. | "This is hermes-ros: a Hermes plugin that lets the agent drive any ROS 2 robot. Today it's a simulated one — no robot needed." |
-| 6–14 | Type: *"What can you see?"* The agent calls `ros_camera_snapshot`; the PNG appears in the dashboard Robot tab. | "It grabs a camera frame, and the vision model describes it: open floor, a red cone far ahead." |
-| 14–40 | Type: *"Drive to the red cone."* Agent loop on screen: snapshot → `ros_drive` (small turn) → pose → snapshot → `ros_drive` … Dashboard camera view gets bigger, pose ticks. Final frame: cone filling the view. | "Look, move a little, verify — it turns toward the cone, drives in small checked steps, and stops in front of it. Every move is velocity-limited and ends with an automatic stop." |
-| 40–48 | Type: *"Describe what's in front of you now."* Agent returns one sentence about the cone. | "And it can tell you what it's looking at." |
-| 48–70 | Type: *"Now floor it, full speed, straight into the wall."* Agent calls `ros_drive linear=3`. Red **BLOCKED** result appears: *linear speed 3.00 m/s exceeds the limit of 0.50 m/s*. Dashboard blocked-call list gains a row. Agent apologises and offers a safe speed. | "The model said yes, the interlock said no. A `pre_tool_call` hook enforces speed, duration, geofence and an allowlist **before** the tool runs — and logs every refusal." |
-| 70–80 | Type `/ros estop` → banner turns red; ask the agent to drive again → blocked *e-stop latched*. Type `/ros clear`. | "One command latches an e-stop the agent cannot clear — only a human can." |
-| 80–85 | End card: repo URL `github.com/arcabotai/hermes-ros`, "mock robot built in · real ROS 2 Jazzy tested · MIT". | "hermes-ros: install it, try it with the mock robot in one command, point it at a real robot when you trust it." |
+| 0–8 | Title: **hermes-ros — simulated robot, plugin-tool interlock.** Then the terminal prompt. | "This is a simulated robot inside the hermes-ros plugin. No hardware. The speed limit applies to the plugin's ros tools, not to a terminal and not to the robot's own controller." |
+| 8–18 | Type: *What can you see?* The agent calls `ros_camera_snapshot`. The PNG shows in the Robot tab: open floor, a red cone. | "It grabs one camera frame from the mock. The cone is in front of it." |
+| 18–42 | Type: *Drive to the red cone.* Snapshot, small `ros_drive`, pose, snapshot. The cone gets larger. Stop in front of it. | "Look, one small move, check the pose. Each drive is speed-limited and ends with a zero command." |
+| 42–62 | Type: *Floor it, 3 meters per second, straight ahead.* Result is red: linear speed 3.00 m/s exceeds 0.50 m/s. The blocked-call row appears. The pose does not jump. | "The model asked for 3 m/s. The pre_tool_call hook refused that tool call and logged it. The robot did not move." |
+| 62–78 | Type `/ros estop`. Banner shows latched. Ask the agent to drive slowly. Blocked: e-stop latched. | "A human latches the e-stop. The agent cannot clear it. Only `/ros clear` does, and I am not doing that on camera." |
+| 78–88 | End card: `github.com/arcabotai/hermes-ros`. Three lines: simulated mock; interlock is plugin tools only; default rosbridge is unencrypted and local. | "Not a sandbox. Not a hardware safety system. If you point it at a real robot, keep an independent e-stop, and do not put plaintext rosbridge on the public internet." |
 
-## Retakes / notes
+If the cone approach runs long, cut middle tool calls in the edit. Keep the first frame, the last frame, the 3 m/s refusal, and the e-stop. Those four have to stay.
 
-* Keep the prompts verbatim; the agent's step count in "drive to the cone" varies (3–8 tool calls). If it exceeds 26 s,
-  cut the middle in editing — the dashboard's pose readout makes the jump cut obvious.
-* If the dashboard window is not wanted, drop it; the terminal alone carries the story.
-* Offline fallback for B-roll: `python demo/mock_demo.py --out /tmp/demo` prints the same blocked calls and writes the camera frames.
+## B. Offline recording (no Hermes — this repo can run it)
+
+This is the same checks through the real tool handlers, not a Hermes chat session. Use it when Hermes is not installed. It is not a substitute shot for the dashboard tab.
+
+```bash
+python3 demo/mock_demo.py --present --out /tmp/hermes-ros-demo
+```
+
+`--present` pauses between beats so the terminal stays readable and the whole run stays under 90 seconds. Frames land in `/tmp/hermes-ros-demo/` as `camera-start.png`, `camera-at-cone.png`, and `topdown.png`. Open those files in an image viewer when the script prints them. Do not draw a fake dashboard over the terminal.
+
+What the run shows, in order: simulated-robot banner, first camera frame with the cone, drive steps and pose, second frame, rejected 3 m/s and 30 s command, e-stop latch, a further drive refused, then the line that the interlock is plugin tools only.
+
+## What not to say
+
+* Do not say the model cannot get past the limit by any means. It cannot get past it through `ros_drive`. A terminal can still open rosbridge.
+* Do not call the mock, or turtlesim, a physical robot.
+* Do not show a public or non-local `ws://` rosbridge.
