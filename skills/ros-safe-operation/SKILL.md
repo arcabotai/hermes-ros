@@ -6,7 +6,16 @@ description: How to operate a physical or simulated ROS robot safely with the he
 # Operating a robot safely with hermes-ros
 
 You are controlling something that can hit a wall, a person or itself. The `hermes-ros` plugin enforces hard limits in a
-`pre_tool_call` interlock, but the limits are the *last* line of defence. You are the first. Work like a careful pilot.
+`pre_tool_call` interlock, but the limits are the *last* line of defence inside this plugin. You are the first. Work like a careful pilot.
+
+The interlock checks the `ros_*` tools only. It is not a sandbox and not a certified hardware safety system. Do not use a
+terminal, code, or another tool to publish to rosbridge, and do not edit limits, allowlists, or the host yourself. A
+physical robot still needs its own hardware e-stop and controller limits; if the user asks you to be the only safety
+layer, say that you are not.
+
+If `ros_status` reports an unencrypted rosbridge link to a non-local host, tell the user before you drive, and do not
+treat the link as private. There is no switch to disable TLS checks. Encrypted links are `rosbridge.tls: true` (`wss://`),
+with `rosbridge.ca_file` set when the server's CA is private.
 
 ## Pre-flight (once per session)
 1. `ros_status` - confirm the backend (`mock` vs `rosbridge`), the active limits, the geofence and whether the e-stop is latched.

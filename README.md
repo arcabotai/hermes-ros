@@ -1,14 +1,23 @@
 # hermes-ros
 
-**Let a Hermes agent drive a ROS / ROS 2 robot — with a safety interlock the model cannot talk its way past.**
+**Let a Hermes agent drive a ROS / ROS 2 robot, with a safety interlock on this plugin's own tools.**
 
 `hermes-ros` is a [Hermes Agent](https://hermes-agent.nousresearch.com) plugin. It gives the agent nine robot tools
 (discover, read odometry, grab a camera frame, drive, call services, e-stop) over a
 [rosbridge](https://github.com/RobotWebTools/rosbridge_suite) websocket, and puts every one of them behind a
 `pre_tool_call` hook that enforces speed, duration, geofence and write-allowlist limits and a latching e-stop.
 
+**Read this before you point it at a robot.** The interlock is not a sandbox, and it is not a certified hardware safety
+system. It checks the nine `ros_*` tools only. A terminal, code execution, or an edit to `config.yaml` can still open
+rosbridge or change the limits. A real robot needs its own hardware e-stop, controller velocity limits, and physical
+safeguards. The default link is an **unencrypted** websocket, `ws://localhost:9090`, and only when you set
+`backend: rosbridge` (mock mode, the default, uses no network). Keep that server on this machine or a trusted network.
+Do not expose an unencrypted rosbridge to the public internet. `rosbridge.tls: true` uses `wss://` and checks the
+certificate and hostname; that check cannot be turned off. Full statement: [Safety limits](#safety-limits).
+
 It ships with a **built-in mock robot** (a 2D simulator with a rendered camera and a red cone), so you can try the whole
-thing in one command with **no ROS, no Docker and no robot** — and so CI can test it.
+thing in one command with **no ROS, no Docker and no robot** — and so CI can test it. The pictures below are that
+simulator, or turtlesim with a synthetic camera, not a physical robot.
 
 > "Drive to the red cone." → the agent looks through the camera, turns toward the cone, drives in small verified steps and
 > reports what it sees. "Floor it into the wall." → *blocked: linear speed 3.00 m/s exceeds the limit of 0.50 m/s*.
@@ -48,7 +57,7 @@ Inside a Hermes session, `/ros` is for the **human**: `/ros status`, `/ros estop
 ## Quickstart (real ROS 2 in Docker)
 
 ```bash
-docker compose up --build        # ROS 2 Jazzy + rosbridge_server + turtlesim + a synthetic camera on ws://localhost:9090
+docker compose up --build        # ROS 2 Jazzy + rosbridge + turtlesim + a synthetic camera on plaintext ws://127.0.0.1:9090
 ```
 
 Then merge [`docker/hermes-config.example.yaml`](docker/hermes-config.example.yaml) into `~/.hermes/config.yaml`
@@ -85,10 +94,11 @@ Its API is mounted under `/api/plugins/hermes-ros/` and needs the dashboard sess
 A bundled skill, `ros-safe-operation`, teaches the agent the pre-flight checklist, the *look → one small move → verify*
 loop, how to read refusals, and e-stop discipline.
 
-## Safety model
+## Safety limits
 
 All checks run in a `pre_tool_call` hook, before the handler. A blocked call is returned to the model as an explanation
-(so it can adapt) and is **logged** with its reason: in memory, to `blocked.jsonl`, and to the Hermes log.
+(so it can adapt) and is **logged** with its reason: in memory, to `blocked.jsonl`, and to the Hermes log. The hook
+applies only when the model calls a `ros_*` tool. It does not wrap the process, the shell, or other plugins.
 
 | Rule | Blocks (or clamps, with `over_limit_action: clamp`) |
 |---|---|
@@ -108,10 +118,23 @@ Design points:
 * **Config, not environment variables.** All limits live in the plugin's `settings`; the plugin adds no `HERMES_*` env vars.
 * The mock backend enforces the same pipeline, so the safety behaviour you test in mock is the behaviour on the robot.
 
-**What this does not protect against:** the interlock covers the `ros_*` tools. An agent with a terminal tool, or anyone
-who can edit your config or reach the rosbridge port, can bypass it. It is not a replacement for a hardware e-stop, a
-velocity limiter in the robot's own stack, or obstacle avoidance. The geofence relies on odometry (dead reckoning in the
-odom frame) and drifts. Use a real e-stop on real hardware.
+**What this does not do:**
+
+* **Not a sandbox.** The interlock covers the `ros_*` tools. It does not stop a terminal, code execution, or another
+  tool from opening the rosbridge port, publishing `cmd_vel`, or editing `~/.hermes/config.yaml` (limits, allowlists,
+  host, and `tls` all live there and are read on the next call).
+* **Not a certified safety system.** It is not a hardware e-stop, a safety PLC, or a substitute for velocity limits and
+  obstacle avoidance in the robot's own controller. The geofence uses odometry in the odom frame and drifts. A physical
+  robot needs those independent protections whether or not this plugin is installed.
+* **Not a private network by default.** `backend: rosbridge` opens one websocket lazily, on the first tool call.
+  `tls: false` (the default) is plaintext `ws://`. Loopback (`localhost`, `127.0.0.0/8`, `::1`, `*.localhost`) is the
+  intended default and is what the Docker demo uses (`127.0.0.1:9090` only). Any other host gets a plaintext warning
+  on `ros_status`, `/ros status`, and a failed connect. Do not publish an unencrypted rosbridge on a public address.
+* **Encrypted link.** `rosbridge.tls: true` connects with `wss://`. The client requires a valid certificate
+  (`ssl.CERT_REQUIRED`) and checks the hostname. There is no setting to skip either check. For a private CA, set
+  `rosbridge.ca_file` to that CA's PEM file; a missing file refuses the connection. The system trust store is used when
+  `ca_file` is empty. This path was tested against a local TLS server with a temporary certificate, not against a
+  physical robot's rosbridge.
 
 ## Config reference
 
@@ -123,7 +146,13 @@ plugins:
     hermes-ros:
       settings:
         backend: mock                    # mock | rosbridge
-        rosbridge: {host: localhost, port: 9090, connect_timeout_s: 6.0, call_timeout_s: 8.0}
+        rosbridge:
+          host: localhost              # hostname or IP, not a URL
+          port: 9090
+          connect_timeout_s: 6.0
+          call_timeout_s: 8.0
+          tls: false                   # true: wss://, certificate and hostname checked, no skip switch
+          ca_file: ""                  # PEM CA bundle, used only when tls is true; empty = system trust store
         topics:
           cmd_vel: /cmd_vel
           cmd_vel_type: geometry_msgs/Twist     # TurtleBot3 on Jazzy: geometry_msgs/msg/TwistStamped
@@ -160,27 +189,36 @@ plugins:
 ## Disclosure
 
 * **Network:** in `rosbridge` mode the plugin opens one websocket to the **rosbridge server you configure**
-  (`ws://<rosbridge.host>:<rosbridge.port>`, default `localhost:9090`) and talks only to it, lazily on the first tool call —
-  nothing is opened at import or registration time. In `mock` mode (the default) it makes **no network connections**.
+  (`ws://<host>:<port>` by default, or `wss://` when `rosbridge.tls` is true; default `ws://localhost:9090`) and talks
+  only to it, lazily on the first tool call — nothing is opened at import or registration time. In `mock` mode (the
+  default) it makes **no network connections**. Do not expose an unencrypted rosbridge beyond a trusted network.
 * **Files written** (all under `<HERMES_HOME>/plugin-data/<plugin>/` unless you set `camera.output_dir`): camera snapshots
   (`snapshots/`, pruned to `keep_last`), the blocked-call audit log (`blocked.jsonl`), the e-stop latch (`estop.json`), the last pose (`last_pose.json`, read by the dashboard tab) and,
   in mock mode, the simulated pose (`mock_state.json`). The dashboard tab only reads these.
-* **Credentials:** none. The rosbridge websocket is unauthenticated, as rosbridge usually is; keep it on a trusted network.
+* **Credentials:** none. The plugin does not add authentication. rosbridge itself is usually unauthenticated; network
+  placement (loopback or a trusted network, or `wss://` with a real certificate) is what keeps other clients off it.
 * **Dependencies:** `websocket-client` (pure Python; already part of Hermes's lock). No ROS installation is needed on the Hermes host.
-* **Physical effects:** with a real robot attached, the agent can move it. Read [Safety model](#safety-model).
+* **Physical effects:** with a real robot attached, the agent can move it, within the plugin tools and subject to the
+  limits above. Read [Safety limits](#safety-limits). The interlock does not confine other tools.
 
 ## Verification
 
-Everything below was actually run (logs in [`docs/verification/`](docs/verification)):
+The first row was re-run for the transport change. The other rows are earlier recorded runs (logs in
+[`docs/verification/`](docs/verification)), not a fresh pass:
 
 | Check | Result |
 |---|---|
-| `pytest tests` (interlock, mock tools, registration, imaging, rosbridge protocol against an in-process fake server) | **79 passed**, 10 skipped (live) |
+| `pytest tests` (interlock, mock tools, registration, imaging, dashboard API, plaintext rosbridge protocol, and `wss://` against a temporary local TLS server with certificate and hostname checks left on) | **92 passed**, 10 skipped (live ROS). Re-run for this transport change. Dashboard tests need `fastapi` and `httpx`; without them they skip. |
 | Same suite + live tests against **real ROS 2 Jazzy + rosbridge_server + turtlesim** in a Blaxel sandbox (`scripts/blaxel_e2e.py`) | **85 passed**, 1 skipped (the dashboard-API test module needs fastapi, absent in the sandbox) — incl. real `Image` + `CompressedImage` snapshots, drive/stop, over-speed and geofence blocks, allowlists, e-stop latch, closed-loop drive to the cone |
 | `hermes plugins validate <clone> --install-deps` | Validation passed (all checks ✓, security scan "safe") |
 | `hermes plugins doctor <installed>` | OK: discovery, manifest, import, registration — 9 tools, 1 hook |
 | Dashboard API under the real `hermes dashboard` | `GET /api/plugins/hermes-ros/state` → 401 without the session token, 200 with it (pose, limits, blocked calls); tab rendered in a real browser (camera frame, pose, limits and blocked-call log all render, 0 console errors) |
 | `hermes plugins install arcabotai/hermes-ros` + `enable` in a throwaway `HERMES_HOME`, then a scripted `hermes chat` turn against the mock | agent snapshotted, was refused at 3 m/s / 10 s (logged in `blocked.jsonl`), retried within limits |
+
+The ROS 2 Jazzy, `hermes plugins validate` / `doctor`, in-product dashboard browser, and scripted `hermes chat` rows are
+earlier recorded runs (logs in [`docs/verification/`](docs/verification)). They were not repeated for the transport
+change. **Not tested:** a physical robot, a real rosbridge TLS listener on a robot, ROS 1, macOS, Windows, Gazebo, or
+TurtleBot3 with a physical camera.
 
 Run the tests yourself: `pip install -r requirements-dev.txt && cd tests && python -m pytest`
 (live tests: `HERMES_ROS_LIVE=localhost:9090 python -m pytest live` against the docker demo).
@@ -189,7 +227,8 @@ Run the tests yourself: `pip install -r requirements-dev.txt && cd tests && pyth
 
 * The ROS demo camera is **synthetic** (turtlesim has none), rendered by the same raycaster as the mock. TurtleBot3/Gazebo with a real camera was not tested.
 * Plain ROS 2 over rosbridge only; no actions/nav2 tools yet, and `ros_publish` sends JSON-typed messages (no binary/large payloads).
-* The interlock is advisory against anything that can bypass the tools (see [Safety model](#safety-model)).
+* The interlock covers the `ros_*` tools only (see [Safety limits](#safety-limits)). It is not a sandbox and not a hardware safety system.
+* `wss://` was tested with a temporary local certificate, not with a robot vendor's rosbridge.
 
 ## License
 
@@ -198,6 +237,7 @@ MIT — see [LICENSE](LICENSE).
 ## AI-assistance disclosure
 
 This plugin, its tests, docs and demo were written by an AI agent from the Arca Computer, Inc. agent family, and reviewed by
-a human maintainer. The real-ROS verification above was executed by that agent in an ephemeral cloud sandbox.
+a human maintainer. The real-ROS verification above was executed by that agent in an ephemeral cloud sandbox and was
+not repeated for the later transport change.
 
 — Built by an AI agent from Arca. All code here is stewarded and reviewed by Luis Felipe Abarca ([@felirami](https://github.com/felirami)) of Arca Computer, Inc. (https://arca.computer). All Arca OSS contributions: https://oss.arcabot.ai

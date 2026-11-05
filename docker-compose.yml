@@ -1,9 +1,10 @@
-# ROS 2 demo robot for hermes-ros:  docker compose up --build   ->  rosbridge on ws://localhost:9090
+# ROS 2 demo robot for hermes-ros:  docker compose up --build   ->  plaintext rosbridge on ws://127.0.0.1:9090
+# Bound to loopback on the host. Do not port-forward 9090 to the public internet. A remote robot should use rosbridge.tls: true.
 services:
   ros:
     build:
       context: .
       dockerfile: docker/Dockerfile
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     restart: unless-stopped

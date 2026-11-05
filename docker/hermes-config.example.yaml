@@ -4,7 +4,8 @@ plugins:
     hermes-ros:
       settings:
         backend: rosbridge
-        rosbridge: {host: localhost, port: 9090}
+        # Plaintext loopback for this demo. tls: true is wss:// with certificate and hostname checks (no skip switch).
+        rosbridge: {host: localhost, port: 9090, tls: false}
         topics:
           cmd_vel: /turtle1/cmd_vel
           cmd_vel_type: geometry_msgs/msg/Twist
