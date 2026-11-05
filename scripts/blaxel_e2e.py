@@ -44,7 +44,7 @@ say "6/6 pytest: unit + live (real ROS 2 over rosbridge)"
 chroot /ros /bin/bash -c 'python3 -m venv /opt/venv && /opt/venv/bin/pip install -q roslibpy pytest pyyaml && mkdir -p /tmp/artifacts && cd /opt/hermes-ros/tests && HERMES_ROS_ARTIFACTS=/tmp/artifacts HERMES_ROS_LIVE=127.0.0.1:9090 /opt/venv/bin/python -m pytest -rA -p no:cacheprovider' 2>&1 | tee $L/pytest.log | grep -E "PASSED|FAILED|ERROR|passed|failed|error" | sed 's/^PASSED /  ok  /'
 RC=${PIPESTATUS[0]}
 cd /ros/tmp/artifacts 2>/dev/null && tar -czf /tmp/artifacts.tgz . ; cp /ros/tmp/artifacts.tgz /tmp/ 2>/dev/null
-grep -qE " failed| error" $L/pytest.log && RC=1
+grep -qE "[0-9]+ (failed|errors?)( |,|$)" $L/pytest.log && RC=1
 echo "RC=$RC" | tee $L/rc.txt
 """
 
