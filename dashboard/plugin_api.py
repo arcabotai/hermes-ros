@@ -98,12 +98,18 @@ def state(since: float = 0.0, blocked: int = 30) -> Dict[str, Any]:
     safety = settings["safety"]
     out: Dict[str, Any] = {
         "ok": True, "now": time.time(), "backend": settings["backend"],
-        "rosbridge": f"ws://{settings['rosbridge']['host']}:{settings['rosbridge']['port']}" if settings["backend"] == "rosbridge" else None,
+        "rosbridge": None, "encrypted": None, "transport_warning": None,
         "limits": {k: safety[k] for k in ("max_linear_mps", "max_angular_rps", "max_duration_s", "over_limit_action")},
         "geofence": safety["geofence"], "allowlist": safety["write_allowlist"],
         "estop": {"latched": False}, "pose": None, "pose_age_s": None, "blocked": [], "blocked_total": 0, "snapshot": None,
         "data_dir_found": data is not None,
     }
+    if settings["backend"] == "rosbridge":
+        try:
+            ep = _defaults().describe_rosbridge(settings["rosbridge"])
+            out["rosbridge"], out["encrypted"], out["transport_warning"] = ep["url"], ep["encrypted"], ep["warning"]
+        except ValueError as exc:
+            out["transport_warning"] = str(exc)
     if data is None:
         return out
     latch = _read_json(data / "estop.json")

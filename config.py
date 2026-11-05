@@ -6,12 +6,26 @@ tool call without restarting Hermes. No new HERMES_* environment variables are i
 from __future__ import annotations
 
 import copy
+import os
 from typing import Any, Callable, Dict
+
+# Shown on ros_status / /ros status when backend=rosbridge talks plaintext to a host outside the loopback.
+# Localhost (the default, and the docker demo) stays quiet: that link never leaves the machine.
+PLAINTEXT_REMOTE_WARNING = (
+    "Unencrypted rosbridge websocket (ws://) to a non-loopback host. "
+    "Velocity commands and camera frames travel in plaintext. "
+    "Use this only on a trusted network, and do not expose an unencrypted rosbridge to the public internet. "
+    "Set rosbridge.tls: true for wss://; the server certificate and hostname are verified, and that check cannot be turned off."
+)
 
 DEFAULTS: Dict[str, Any] = {
     # "mock" (built-in 2D sim, no ROS needed) or "rosbridge" (real robot / sim via a rosbridge websocket)
     "backend": "mock",
-    "rosbridge": {"host": "localhost", "port": 9090, "connect_timeout_s": 6.0, "call_timeout_s": 8.0},
+    "rosbridge": {
+        "host": "localhost", "port": 9090, "connect_timeout_s": 6.0, "call_timeout_s": 8.0,
+        "tls": False,  # true: wss:// with certificate + hostname verification (there is no skip switch)
+        "ca_file": "",  # PEM CA bundle used only when tls is true; empty means the system trust store
+    },
     "topics": {
         "cmd_vel": "/cmd_vel",
         "cmd_vel_type": "geometry_msgs/Twist",  # TurtleBot3 on Jazzy wants geometry_msgs/TwistStamped
@@ -52,6 +66,66 @@ DEFAULTS: Dict[str, Any] = {
         "persist": True,  # remember the robot pose between processes (plugin-data/hermes-ros/mock_state.json)
     },
 }
+
+
+def _coerce_tls(value: Any) -> bool:
+    """Bool-ish config without treating the string ``\"false\"`` as true."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)) and value in (0, 1):
+        return bool(value)
+    if isinstance(value, str):
+        text = value.strip().lower()
+        if text in ("1", "true", "yes", "on"):
+            return True
+        if text in ("0", "false", "no", "off", ""):
+            return False
+    raise ValueError("rosbridge.tls must be true or false")
+
+
+def _is_loopback(host: str) -> bool:
+    """Hosts whose rosbridge traffic stays on this machine. Anything else is treated as remote."""
+    name = host.strip().lower().strip("[]").rstrip(".")
+    if name in ("localhost", "::1") or name.endswith(".localhost"):
+        return True
+    parts = name.split(".")
+    if len(parts) == 4 and all(part.isdigit() and 0 <= int(part) <= 255 for part in parts):
+        return int(parts[0]) == 127
+    return False
+
+
+def describe_rosbridge(rb: Any) -> Dict[str, Any]:
+    """URL, encryption flag and plaintext warning for a rosbridge settings dict. No network I/O.
+
+    ``host`` is a hostname or IP, never a URL. Encryption is ``tls: true`` (wss://). Certificate and
+    hostname checks are always on for that path; this function has no field that turns them off.
+    """
+    if not isinstance(rb, dict):
+        raise ValueError("rosbridge settings must be a mapping with host, port, and optional tls and ca_file")
+    host = str(rb.get("host", "localhost")).strip()
+    if (not host or "://" in host or "/" in host or "@" in host or "\\" in host
+            or any(ch.isspace() for ch in host)):
+        raise ValueError(
+            "rosbridge.host must be a hostname or IP address, not a URL. "
+            "Set rosbridge.tls: true for an encrypted wss:// connection."
+        )
+    try:
+        port = int(rb.get("port", 9090))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("rosbridge.port must be an integer") from exc
+    if not 1 <= port <= 65535:
+        raise ValueError("rosbridge.port must be between 1 and 65535")
+    tls = _coerce_tls(rb.get("tls", False))
+    raw_ca = rb.get("ca_file")
+    ca_file = "" if raw_ca is None else os.path.expanduser(str(raw_ca).strip())
+    bare = host.strip("[]")
+    url_host = f"[{bare}]" if ":" in bare else bare
+    scheme = "wss" if tls else "ws"
+    warning = None if tls or _is_loopback(bare) else PLAINTEXT_REMOTE_WARNING
+    return {
+        "host": bare, "port": port, "tls": tls, "ca_file": ca_file,
+        "url": f"{scheme}://{url_host}:{port}", "encrypted": tls, "warning": warning,
+    }
 
 
 def deep_merge(base: Dict[str, Any], over: Dict[str, Any]) -> Dict[str, Any]:

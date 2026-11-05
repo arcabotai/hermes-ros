@@ -44,7 +44,16 @@ class Runtime:
     def backend(self) -> Backend:
         cfg = self.settings.snapshot()
         kind = str(cfg["backend"]).lower()
-        key = (kind, cfg["rosbridge"]["host"], cfg["rosbridge"]["port"]) if kind == "rosbridge" else (kind,)
+        if kind == "rosbridge":
+            from .config import describe_rosbridge
+            try:
+                ep = describe_rosbridge(cfg["rosbridge"])
+            except ValueError as exc:
+                raise BackendError(str(exc)) from exc
+            # tls / ca_file are read on every call; a change must drop the old socket, not keep speaking ws://.
+            key = ("rosbridge", ep["url"], ep["ca_file"])
+        else:
+            key = (kind,)
         with self._lock:
             if self._backend is None or key != self._backend_key:
                 if self._backend is not None:

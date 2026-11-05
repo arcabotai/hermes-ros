@@ -60,12 +60,21 @@ def make_command(rt: Runtime) -> Callable[[str], str]:
             est = res["estop"]
             lim = res["limits"]
             gf = res["geofence"]
-            lines = [f"backend: {res['backend']}",
-                     f"e-stop: {'LATCHED — ' + str(est.get('reason')) if est.get('latched') else 'clear'}",
-                     f"limits: ≤{lim['max_linear_mps']} m/s, ≤{lim['max_angular_rps']} rad/s, ≤{lim['max_duration_s']} s ({lim['over_limit_action']} when exceeded)",
-                     f"geofence: {'x[%s,%s] y[%s,%s]' % (gf['x_min'], gf['x_max'], gf['y_min'], gf['y_max']) if gf.get('enabled') else 'off'}",
-                     f"write allowlist: topics={res['write_allowlist']['topics']} services={res['write_allowlist']['services']}",
-                     f"calls: {res['counters']}"]
+            be = res["backend"]
+            lines = [f"backend: {be.get('backend') if isinstance(be, dict) else be}"]
+            if isinstance(be, dict) and be.get("url"):
+                lines.append(f"link: {be['url']} ({'encrypted' if be.get('encrypted') else 'unencrypted'})")
+            if isinstance(be, dict) and be.get("transport_warning"):
+                lines.append(f"transport: {be['transport_warning']}")
+            if isinstance(be, dict) and be.get("error"):
+                lines.append(f"link error: {be['error']}")
+            lines += [
+                f"e-stop: {'LATCHED — ' + str(est.get('reason')) if est.get('latched') else 'clear'}",
+                f"limits: ≤{lim['max_linear_mps']} m/s, ≤{lim['max_angular_rps']} rad/s, ≤{lim['max_duration_s']} s ({lim['over_limit_action']} when exceeded)",
+                f"geofence: {'x[%s,%s] y[%s,%s]' % (gf['x_min'], gf['x_max'], gf['y_min'], gf['y_max']) if gf.get('enabled') else 'off'}",
+                f"write allowlist: topics={res['write_allowlist']['topics']} services={res['write_allowlist']['services']}",
+                f"calls: {res['counters']}",
+            ]
             return "\n".join(lines)
         return f"unknown subcommand {sub!r}\n{HELP}"
 

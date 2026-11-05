@@ -47,9 +47,11 @@
     const latched = st.estop && st.estop.latched;
     const p = st.pose;
     const gf = st.geofence || {};
+    const linkNote = st.rosbridge ? (st.encrypted ? ", encrypted" : ", unencrypted") : "";
     return h("div", { className: "space-y-4" },
       h("div", { className: "hros-banner " + (latched ? "bad" : "ok") },
         latched ? "E-STOP LATCHED — " + (st.estop.reason || "") + " (a human clears it with /ros clear)" : "E-stop clear · interlock active"),
+      st.transport_warning ? h("div", { className: "hros-banner warn" }, st.transport_warning) : null,
       h("div", { className: "hros-grid" },
         h(Card, null,
           h(CardHeader, null, h(CardTitle, null, "Camera")),
@@ -69,7 +71,7 @@
           h(Card, null,
             h(CardHeader, null, h(CardTitle, null, "Safety limits")),
             h(CardContent, null, kv([
-              ["backend", st.backend + (st.rosbridge ? " (" + st.rosbridge + ")" : "")],
+              ["backend", st.backend + (st.rosbridge ? " (" + st.rosbridge + linkNote + ")" : "")],
               ["max speed", f(st.limits.max_linear_mps) + " m/s · " + f(st.limits.max_angular_rps) + " rad/s"],
               ["max duration", f(st.limits.max_duration_s, 1) + " s"],
               ["over limit", st.limits.over_limit_action],

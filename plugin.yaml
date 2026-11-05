@@ -35,8 +35,8 @@ config_schema:
   rosbridge:
     type: dict
     label: Rosbridge connection
-    description: "host, port, connect_timeout_s, call_timeout_s (used when backend=rosbridge)"
-    default: {host: localhost, port: 9090, connect_timeout_s: 6.0, call_timeout_s: 8.0}
+    description: "host, port, connect_timeout_s, call_timeout_s, tls (wss:// with certificate and hostname checks; cannot be disabled), ca_file (PEM CA, only when tls is true). Default link is unencrypted ws://localhost."
+    default: {host: localhost, port: 9090, connect_timeout_s: 6.0, call_timeout_s: 8.0, tls: false, ca_file: ""}
   topics:
     type: dict
     label: Topics

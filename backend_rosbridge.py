@@ -6,6 +6,7 @@ Works with ROS 1 and ROS 2 rosbridge servers (``rosbridge_server`` / ``rosapi`` 
 """
 from __future__ import annotations
 
+import logging
 import math
 import threading
 import time
@@ -13,7 +14,10 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from . import imaging
 from .backend_base import Backend, BackendError
+from .config import describe_rosbridge
 from .rosbridge_client import RosbridgeClient
+
+logger = logging.getLogger("hermes_ros")
 
 
 def _quat_to_yaw(q: Dict[str, float]) -> float:
@@ -51,12 +55,16 @@ class RosbridgeBackend(Backend):
     name = "rosbridge"
 
     def __init__(self, rb_cfg: Dict[str, Any], topics_cfg: Dict[str, Any]):
-        self.host = str(rb_cfg.get("host", "localhost"))
-        self.port = int(rb_cfg.get("port", 9090))
-        self.connect_timeout = float(rb_cfg.get("connect_timeout_s", 6.0))
-        self.call_timeout = float(rb_cfg.get("call_timeout_s", 8.0))
+        try:
+            self.endpoint = describe_rosbridge(rb_cfg)
+        except ValueError as exc:
+            raise BackendError(str(exc)) from exc
+        self.host = self.endpoint["host"]
+        self.port = self.endpoint["port"]
+        self.connect_timeout = float(rb_cfg.get("connect_timeout_s", 6.0)) if isinstance(rb_cfg, dict) else 6.0
+        self.call_timeout = float(rb_cfg.get("call_timeout_s", 8.0)) if isinstance(rb_cfg, dict) else 8.0
         self.topics_cfg = topics_cfg
-        self.description = f"rosbridge ws://{self.host}:{self.port}"
+        self.description = f"rosbridge {self.endpoint['url']}"
         self._ros: Any = None
         self._lock = threading.RLock()
         self._pubs: Dict[Tuple[str, str], Any] = {}
@@ -73,13 +81,20 @@ class RosbridgeBackend(Backend):
                 import websocket  # noqa: F401  (websocket-client; checked here so the error is actionable)
             except ImportError as exc:
                 raise BackendError("websocket-client is not installed (pip install 'websocket-client>=1.6,<2')") from exc
-            ros = RosbridgeClient(self.host, self.port)
+            if self.endpoint["warning"]:
+                logger.warning("%s (%s)", self.endpoint["warning"], self.endpoint["url"])
+            ros = RosbridgeClient(self.endpoint["url"], tls=self.endpoint["tls"], ca_file=self.endpoint["ca_file"])
             try:
                 ros.connect(timeout=self.connect_timeout)
             except Exception as exc:
                 ros.close()
-                raise BackendError(f"cannot reach rosbridge at ws://{self.host}:{self.port} ({type(exc).__name__}: {exc}). "
-                                   "Is rosbridge_server running and the host/port in plugin settings correct?") from exc
+                hint = ("Is rosbridge_server listening with TLS, and does the certificate match this host? "
+                        if self.endpoint["tls"] else
+                        "Is rosbridge_server running and the host/port in plugin settings correct?")
+                message = f"cannot reach rosbridge at {self.endpoint['url']} ({type(exc).__name__}: {exc}). {hint}"
+                if self.endpoint["warning"]:
+                    message = f"{message} {self.endpoint['warning']}"
+                raise BackendError(message) from exc
             self._ros = ros
             self._pubs.clear()
             self._odom_sub = None
@@ -102,7 +117,13 @@ class RosbridgeBackend(Backend):
 
     def status(self) -> Dict[str, Any]:
         connected = bool(self._ros is not None and self._ros.is_connected)
-        return {"backend": "rosbridge", "url": f"ws://{self.host}:{self.port}", "connected": connected}
+        out: Dict[str, Any] = {
+            "backend": "rosbridge", "url": self.endpoint["url"], "connected": connected,
+            "encrypted": self.endpoint["encrypted"],
+        }
+        if self.endpoint["warning"]:
+            out["transport_warning"] = self.endpoint["warning"]
+        return out
 
     # ---------------------------------------------------------------- helpers
     def _svc(self, name: str, typ: str, req: Optional[Dict[str, Any]] = None, timeout: Optional[float] = None) -> Dict[str, Any]:

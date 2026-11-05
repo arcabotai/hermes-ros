@@ -19,14 +19,16 @@ GEOFENCE = _G["safety"]["geofence"]
 
 
 class FakeRosbridge:
-    def __init__(self):
+    def __init__(self, ssl_context=None):
         self.received_twists = []
         self.pose = {"x": 0.0, "y": 0.0}
         self.unsub_count = 0
         self.log = []
         self.clients = []
+        self.client_sockets = []
         self._stop = threading.Event()
-        self.server = sync_server.serve(self._handle, "127.0.0.1", 0)
+        kwargs = {"ssl": ssl_context} if ssl_context is not None else {}
+        self.server = sync_server.serve(self._handle, "127.0.0.1", 0, **kwargs)
         self.port = self.server.socket.getsockname()[1]
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
 
@@ -40,6 +42,7 @@ class FakeRosbridge:
 
     def _handle(self, ws):
         self.clients.append(ws)
+        self.client_sockets.append(ws.socket)
         subs = {}
         lock = threading.Lock()
 

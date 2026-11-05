@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import itertools
 import json
+import os
+import ssl
 import threading
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -17,8 +19,10 @@ class RosbridgeError(RuntimeError):
 
 
 class RosbridgeClient:
-    def __init__(self, host: str, port: int) -> None:
-        self.url = f"ws://{host}:{port}"
+    def __init__(self, url: str, *, tls: bool = False, ca_file: str = "") -> None:
+        self.url = url
+        self._tls = tls
+        self._ca_file = ca_file
         self._ws: Any = None
         self._thread: Optional[threading.Thread] = None
         self._opened = threading.Event()
@@ -35,8 +39,30 @@ class RosbridgeClient:
     def is_connected(self) -> bool:
         return self._opened.is_set() and not self._closed.is_set()
 
+    def _sslopt(self) -> Dict[str, Any]:
+        # websocket-client's lower-level wrap treats a missing cert_reqs as CERT_NONE. Set both checks
+        # explicitly so a wss:// connection cannot fall open. There is no config key that overrides this.
+        if self._ca_file and not os.path.isfile(self._ca_file):
+            raise RosbridgeError(
+                f"rosbridge.ca_file {self._ca_file!r} is not a readable PEM file; "
+                "refusing to connect without that trust anchor. TLS certificate and hostname checks cannot be disabled."
+            )
+        opt: Dict[str, Any] = {"cert_reqs": ssl.CERT_REQUIRED, "check_hostname": True}
+        if self._ca_file:
+            opt["ca_certs"] = self._ca_file
+        return opt
+
+    @staticmethod
+    def _tls_verification_failure(err: BaseException) -> bool:
+        if isinstance(err, ssl.SSLError):
+            return True
+        text = f"{type(err).__name__}: {err}".lower()
+        return "certificate" in text or "hostname" in text or "ssl" in text
+
     def connect(self, timeout: float = 6.0) -> None:
         import websocket  # websocket-client; lazy so plugin registration stays offline and import-cheap
+
+        sslopt = self._sslopt() if self._tls else None
 
         def on_open(_ws: Any) -> None:
             self._opened.set()
@@ -54,14 +80,26 @@ class RosbridgeClient:
 
         self._ws = websocket.WebSocketApp(self.url, on_open=on_open, on_message=self._on_message,
                                           on_error=on_error, on_close=on_close)
-        self._thread = threading.Thread(target=lambda: self._ws.run_forever(ping_interval=20, ping_timeout=10),
+        kwargs: Dict[str, Any] = {"ping_interval": 20, "ping_timeout": 10}
+        if sslopt is not None:
+            kwargs["sslopt"] = sslopt
+        self._thread = threading.Thread(target=lambda: self._ws.run_forever(**kwargs),
                                         name="hermes-ros-rosbridge", daemon=True)
         self._thread.start()
         if not self._opened.wait(timeout):
             self.close()
             raise RosbridgeError(f"timed out after {timeout:.0f}s connecting to {self.url}")
         if self._open_error is not None:
-            raise RosbridgeError(f"{type(self._open_error).__name__}: {self._open_error}")
+            err = self._open_error
+            self.close()
+            if self._tls and self._tls_verification_failure(err):
+                raise RosbridgeError(
+                    f"TLS verification failed for {self.url} ({type(err).__name__}: {err}). "
+                    "The server certificate and hostname are both checked. "
+                    "hermes-ros has no option to disable that check. "
+                    "If the server uses a private CA, set rosbridge.ca_file to that CA's PEM file."
+                )
+            raise RosbridgeError(f"{type(err).__name__}: {err}")
 
     def close(self) -> None:
         self._closed.set()
