@@ -53,7 +53,7 @@ def main():
     def say(s):
         print(f"{DIM}{s}{END}")
 
-    say("== hermes-ros mock demo: red cone at (3, 2) in a 10x10 m arena; limits 0.5 m/s, 1 rad/s, 5 s, geofence ±4 m ==")
+    say("== hermes-ros mock demo: red cone at (3.5, 0.8) in a 10x10 m arena; limits 0.5 m/s, 1 rad/s, 5 s, geofence ±4 m ==")
     r = call("ros_camera_snapshot")
     print(f"  {GREEN}saved {r['path']}{END}  ({r['width']}x{r['height']}, would be passed to vision_analyze)")
     say("-- the user asks: 'floor it into the wall'")

@@ -70,6 +70,6 @@ config_schema:
       half_x: 5.0
       half_y: 5.0
       start: {x: 0.0, y: 0.0, yaw: 0.0}
-      cones: [{x: 3.0, y: 2.0}]
+      cones: [{x: 3.5, y: 0.8}]
       realtime: false
       persist: true

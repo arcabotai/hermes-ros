@@ -47,7 +47,7 @@ DEFAULTS: Dict[str, Any] = {
     "mock": {
         "half_x": 5.0, "half_y": 5.0,
         "start": {"x": 0.0, "y": 0.0, "yaw": 0.0},
-        "cones": [{"x": 3.0, "y": 2.0}],
+        "cones": [{"x": 3.5, "y": 0.8}],
         "realtime": False,  # sleep in real time while the sim runs (nice for a live dashboard)
         "persist": True,  # remember the robot pose between processes (plugin-data/hermes-ros/mock_state.json)
     },

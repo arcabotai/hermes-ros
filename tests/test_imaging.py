@@ -32,3 +32,49 @@ def test_parse_pose_odometry_quaternion():
            "twist": {"twist": {"linear": {"x": 0.2}, "angular": {"z": 0.1}}}}
     p = parse_pose(msg)
     assert (p["x"], p["y"]) == (1.5, -2.0) and abs(p["yaw_rad"] - 0.8) < 1e-6 and p["linear_vel"] == 0.2
+
+
+# --- camera / cone visibility (behaviour contract for the "drive to the red cone" demo) ---------------------------
+
+import math  # noqa: E402
+
+
+def _red_pixels(x, y, yaw, cones, half=5.0):
+    buf = imaging.render_forward(x, y, yaw, half, half, cones, raw_rgb=True)
+    return sum(1 for i in range(0, len(buf), 3) if buf[i] > 150 and buf[i + 1] < 80 and buf[i + 2] < 80)
+
+
+def test_cone_in_view_shows_red_pixels():
+    assert _red_pixels(0, 0, 0, [(3.5, 0.8)]) > 150          # ahead and slightly left
+    assert _red_pixels(0, 0, math.atan2(0.8, 3.5), [(3.5, 0.8)]) > 150   # dead centre
+
+
+def test_cone_out_of_view_shows_no_red():
+    cone = [(3.5, 0.8)]
+    assert _red_pixels(0, 0, math.pi, cone) == 0               # behind the robot
+    assert _red_pixels(0, 0, -math.pi / 2, cone) == 0          # off to the side, outside the FOV
+    assert _red_pixels(0, 0, 0, []) == 0                       # no cone in the world at all
+
+
+def test_cone_hidden_by_geometry_is_not_drawn_through_a_wall():
+    # cone outside the arena wall behind the wall as seen from the camera: must stay hidden
+    assert _red_pixels(0, 0, 0, [(6.0, 0.0)]) == 0
+
+
+def test_cone_outside_fov_edge_is_consistent_with_hfov():
+    # bearing just inside / just outside half the horizontal FOV (1.5 rad)
+    inside, outside = 0.70, 0.85
+    c = [(3.0 * math.cos(0.0), 3.0 * math.sin(0.0))]
+    assert _red_pixels(0, 0, -inside, c) > 0
+    assert _red_pixels(0, 0, -outside, c) == 0
+
+
+def test_default_spawn_has_the_cone_in_the_first_snapshot_and_it_stays_in_view_when_driving_straight(tmp_path):
+    from conftest import Harness
+    h = Harness(tmp_path)
+    cfg = h.rt.settings.snapshot()["mock"]
+    x, y, yaw = cfg["start"]["x"], cfg["start"]["y"], cfg["start"]["yaw"]
+    cones = [(c["x"], c["y"]) for c in cfg["cones"]]
+    assert _red_pixels(x, y, yaw, cones, cfg.get("half_x", 5.0)) > 150
+    for step in (0.5, 1.0, 1.5, 2.0):   # driving straight ahead toward the cone
+        assert _red_pixels(x + step, y, yaw, cones) > 0, step

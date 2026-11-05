@@ -77,15 +77,15 @@ def test_cone_is_solid(make):
 def test_drive_to_the_red_cone_end_to_end(robot):
     """The demo storyline: look, turn toward the cone, drive up to it, confirm with the camera."""
     _, before = snapshot_bytes(robot)
-    assert red_pixels(before) > 0 and red_centroid(before) < 110  # cone is in view, off to the left of centre (+y is left)
-    bearing = math.atan2(2.0, 3.0)
+    assert red_pixels(before) > 0 and red_centroid(before) < 150  # cone is in view, a little left of centre (+y is left)
+    bearing = math.atan2(0.8, 3.5)
     robot.call("ros_drive", {"angular": 0.5, "duration_s": bearing / 0.5})
     _, facing = snapshot_bytes(robot)
     assert abs(red_centroid(facing) - 160) < 25  # after turning toward it, it is centred in the picture
     robot.call("ros_drive", {"linear": 0.5, "duration_s": 5})  # 2.5 m
     robot.call("ros_drive", {"linear": 0.3, "duration_s": 2})
     pose = robot.call("ros_get_pose")["pose"]
-    dist = math.hypot(3.0 - pose["x"], 2.0 - pose["y"])
+    dist = math.hypot(3.5 - pose["x"], 0.8 - pose["y"])
     assert 0.3 < dist < 0.8, dist
     _, close = snapshot_bytes(robot)
     assert red_pixels(close) > red_pixels(facing) * 3  # much bigger in view
@@ -113,7 +113,7 @@ def test_camera_inline_mode_returns_multimodal_envelope(make):
 
 
 def test_service_calls(robot):
-    assert robot.call("ros_call_service", {"service": "/mock/get_cones"})["response"]["cones"] == [{"x": 3.0, "y": 2.0}]
+    assert robot.call("ros_call_service", {"service": "/mock/get_cones"})["response"]["cones"] == [{"x": 3.5, "y": 0.8}]
     robot.call("ros_drive", {"linear": 0.4, "duration_s": 2})
     assert robot.call("ros_call_service", {"service": "/mock/reset"})["response"]["success"]
     assert robot.call("ros_get_pose")["pose"]["x"] == 0.0
