@@ -1,0 +1,4 @@
+Plugin Doctor: /tmp/hh-ros/plugins/hermes-ros
+  manifest: hermes-ros 0.1.0 (standalone)
+  OK: runtime discovery, manifest parsing, import, and registration passed
+  registrations: 9 tool(s), 1 hook(s)

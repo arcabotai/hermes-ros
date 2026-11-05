@@ -1,0 +1,220 @@
+........................................................................ [ 90%]
+........                                                                 [100%]
+==================================== PASSES ====================================
+___________ test_interlock_blocks_overspeed_and_turtle_does_not_move ___________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_drive [over_speed_linear]: linear speed 8.00 m/s exceeds the limit of 1.00 m/s | args={"linear": 8.0, "duration_s": 3}
+_________________ test_geofence_with_live_pose_blocks_wall_run _________________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_drive [geofence]: projected path leaves the geofence x[1.0,10.0] y[1.0,10.0] (margin 0.2) at t≈1.9s near (9.90, 5.50); robot is at (8.00, 5.50). Choose a shorter/slower/different move. | args={"linear": 1.0, "duration_s": 5.0}
+______________________ test_topic_and_service_allowlists _______________________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_publish [topic_not_allowlisted]: topic '/turtle2/cmd_vel' is not on the write allowlist ['/turtle1/cmd_vel']. Writing to it is not permitted; a human can add it under safety.write_allowlist.topics. | args={"topic": "/turtle2/cmd_vel", "msg_type": "geometry_msgs/Twist", "message": {"linear": {"x": 0.1}, "angular": {"z": 0}}, "duration_s": 1}
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_call_service [service_not_allowlisted]: service '/reset' is not on the write allowlist ['/turtle1/teleport_absolute']. Writing to it is not permitted; a human can add it under safety.write_allowlist.services. | args={"service": "/reset"}
+_________________________ test_estop_latch_end_to_end __________________________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:163 E-STOP engaged by agent: live test
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_drive [estop_latched]: e-stop is latched (live test); motion is blocked until a human clears it with /ros clear | args={"linear": 0.2, "duration_s": 1}
+WARNING  hermes_ros.interlock:safety.py:173 E-stop cleared by human
+___________ test_overspeed_linear_is_blocked_and_robot_does_not_move ___________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_drive [over_speed_linear]: linear speed 2.00 m/s exceeds the limit of 0.50 m/s | args={"linear": 2.0, "duration_s": 2}
+______________________ test_overspeed_angular_is_blocked _______________________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_drive [over_speed_angular]: angular speed 5.00 rad/s exceeds the limit of 1.00 rad/s | args={"angular": 5.0, "duration_s": 1}
+________________________ test_over_duration_is_blocked _________________________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_drive [over_duration]: duration 60.0s exceeds the maximum of 5.0s | args={"linear": 0.2, "duration_s": 60}
+___________________ test_negative_and_nan_values_are_handled ___________________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_drive [over_speed_linear]: linear speed 2.00 m/s exceeds the limit of 0.50 m/s | args={"linear": -2.0, "duration_s": 1}
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_drive [invalid_args]: linear must be finite, got nan | args={"linear": NaN, "duration_s": 1}
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_drive [invalid_args]: linear must be a number, got 'fast' | args={"linear": "fast", "duration_s": 1}
+_____________ test_zero_twist_is_always_allowed_even_when_latched ______________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:163 E-STOP engaged by human: test
+______________ test_estop_latch_blocks_motion_until_human_clears _______________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:163 E-STOP engaged by agent: test
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_drive [estop_latched]: e-stop is latched (test); motion is blocked until a human clears it with /ros clear | args={"linear": 0.1, "duration_s": 1}
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_call_service [estop_latched]: e-stop is latched (test); service calls are blocked until a human clears it with /ros clear | args={"service": "/mock/reset"}
+WARNING  hermes_ros.interlock:safety.py:173 E-stop cleared by human
+______________________ test_estop_latch_survives_restart _______________________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:163 E-STOP engaged by human: persist me
+_________________ test_topic_allowlist_blocks_other_publishers _________________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_publish [topic_not_allowlisted]: topic '/arm/joint_cmd' is not on the write allowlist ['/cmd_vel']. Writing to it is not permitted; a human can add it under safety.write_allowlist.topics. | args={"topic": "/arm/joint_cmd", "msg_type": "std_msgs/Float64", "message": {"data": 1.0}}
+___________ test_motion_topic_cannot_dodge_the_allowlist_by_renaming ___________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_publish [topic_not_allowlisted]: topic '/robot2/cmd_vel' is not on the write allowlist ['/cmd_vel']. Writing to it is not permitted; a human can add it under safety.write_allowlist.topics. | args={"topic": "/robot2/cmd_vel", "msg_type": "geometry_msgs/Twist", "message": {"linear": {"x": 0.2}, "angular": {"z": 0}}, "duration_s": 1}
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_publish [topic_not_allowlisted]: topic '/cmd_vel_raw' is not on the write allowlist ['/cmd_vel']. Writing to it is not permitted; a human can add it under safety.write_allowlist.topics. | args={"topic": "cmd_vel_raw", "msg_type": "geometry_msgs/Twist", "message": {"linear": {"x": 0.2}, "angular": {"z": 0}}, "duration_s": 1}
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_publish [topic_not_allowlisted]: topic '//cmd_vel/' is not on the write allowlist ['/cmd_vel']. Writing to it is not permitted; a human can add it under safety.write_allowlist.topics. | args={"topic": "//cmd_vel/", "msg_type": "geometry_msgs/Twist", "message": {"linear": {"x": 0.2}, "angular": {"z": 0}}, "duration_s": 1}
+__________________ test_unreadable_motion_message_is_refused ___________________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_publish [unparseable_motion_message]: /cmd_vel looks like a velocity topic but the message is not a readable Twist/TwistStamped; refusing because its speed cannot be verified | args={"topic": "/cmd_vel", "msg_type": "geometry_msgs/Twist", "message": {"junk": 1}, "duration_s": 1}
+_____________ test_publish_overspeed_through_raw_topic_is_blocked ______________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_publish [over_speed_linear]: linear speed 9.00 m/s exceeds the limit of 0.50 m/s | args={"topic": "/cmd_vel", "msg_type": "geometry_msgs/Twist", "message": {"linear": {"x": 9, "y": 0, "z": 0}, "angular": {"x": 0, "y": 0, "z": 0}}, "duration_s": 1}
+__________________ test_diagonal_linear_speed_counts_all_axes __________________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_publish [over_speed_linear]: linear speed 0.57 m/s exceeds the limit of 0.50 m/s | args={"topic": "/cmd_vel", "msg_type": "geometry_msgs/Twist", "message": {"linear": {"x": 0.4, "y": 0.4, "z": 0}, "angular": {"x": 0, "y": 0, "z": 0}}, "duration_s": 1}
+____________________________ test_service_allowlist ____________________________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_call_service [service_not_allowlisted]: service '/robot/self_destruct' is not on the write allowlist ['/mock/*']. Writing to it is not permitted; a human can add it under safety.write_allowlist.services. | args={"service": "/robot/self_destruct", "request": {}}
+__________________ test_geofence_blocks_path_leaving_the_box ___________________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_drive [geofence]: projected path leaves the geofence x[-1.0,3.0] y[-2.0,2.0] (margin 0.25) at t≈2.6s near (2.80, 0.00); robot is at (1.50, 0.00). Choose a shorter/slower/different move. | args={"linear": 0.5, "duration_s": 3}
+_____________________ test_geofence_considers_turning_arcs _____________________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_drive [geofence]: projected path leaves the geofence x[-0.3,5] y[-0.3,0.3] (margin 0.25) at t≈0.7s near (0.27, 0.07); robot is at (0.00, 0.00). Choose a shorter/slower/different move. | args={"linear": 0.4, "angular": 0.8, "duration_s": 3}
+_________________ test_geofence_fails_closed_without_odometry __________________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_drive [geofence_no_odom]: geofence is enabled but no odometry is available; refusing to move blind (check the odom topic / rosbridge connection) | args={"linear": 0.1, "duration_s": 1}
+_________________ test_geofence_fails_closed_on_stale_odometry _________________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_drive [geofence_odom_stale]: latest odom is 99.0s old (max 5.0s); refusing to move on stale data | args={"linear": 0.1, "duration_s": 1}
+______________________ test_interlock_crash_fails_closed _______________________
+------------------------------ Captured log call -------------------------------
+ERROR    hermes_ros.interlock:safety.py:382 interlock error
+Traceback (most recent call last):
+  File "/opt/hermes-ros/safety.py", line 377, in pre_tool_call
+    result = self.evaluate(tool_name, args)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hermes-ros/tests/test_interlock.py", line 145, in boom
+    raise RuntimeError("kaboom")
+RuntimeError: kaboom
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_drive [interlock_error]: RuntimeError('kaboom') | args={"linear": 0.1, "duration_s": 1}
+____________ test_handlers_refuse_to_act_when_the_hook_did_not_run _____________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_drive [interlock_not_applied]: this call was not vetted by the hermes-ros safety interlock (pre_tool_call hook did not run); refusing to act | args={"linear": 5.0, "duration_s": 5}
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_drive [interlock_not_applied]: this call was not vetted by the hermes-ros safety interlock (pre_tool_call hook did not run); refusing to act | args={"linear": 5.0, "duration_s": 5}
+________________ test_every_blocked_call_is_logged_with_reason _________________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_drive [over_speed_linear]: linear speed 9.00 m/s exceeds the limit of 0.50 m/s | args={"linear": 9, "duration_s": 1}
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_publish [topic_not_allowlisted]: topic '/x' is not on the write allowlist ['/cmd_vel']. Writing to it is not permitted; a human can add it under safety.write_allowlist.topics. | args={"topic": "/x", "msg_type": "std_msgs/String", "message": {"data": "a"}}
+___________________ test_runtime_geofence_abort_stops_robot ____________________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_drive [geofence_runtime]: aborted: robot left the geofence | args={"runtime": true}
+____________ test_pre_tool_call_hook_registered_and_accepts_kwargs _____________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_drive [over_speed_linear]: linear speed 9.00 m/s exceeds the limit of 0.50 m/s | args={"linear": 9, "duration_s": 1}
+______________________ test_slash_command_human_controls _______________________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:163 E-STOP engaged by human: too close to the wall
+WARNING  hermes_ros.interlock:safety.py:173 E-stop cleared by human
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_drive [over_speed_linear]: too fast | args={"linear": 9}
+__________________ test_blocked_drive_never_reaches_the_wire ___________________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_drive [over_speed_linear]: linear speed 2.00 m/s exceeds the limit of 0.50 m/s | args={"linear": 2.0, "duration_s": 1}
+__________________ test_geofence_uses_live_odom_from_the_wire __________________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_drive [geofence]: projected path leaves the geofence x[-1.0,3.0] y[-2.0,2.0] (margin 0.25) at t≈0.0s near (2.90, 0.00); robot is at (2.90, 0.00). Choose a shorter/slower/different move. | args={"linear": 0.4, "duration_s": 2}
+__________________ test_service_calls_allowlist_and_failures ___________________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_call_service [service_not_allowlisted]: service '/rosapi/nodes' is not on the write allowlist ['/reset', '/explode']. Writing to it is not permitted; a human can add it under safety.write_allowlist.services. | args={"service": "/rosapi/nodes"}
+_________________ test_unreachable_rosbridge_is_a_clean_error __________________
+------------------------------ Captured log call -------------------------------
+ERROR    websocket:_logging.py:92 [Errno 111] Connection refused - goodbye
+____________ test_server_going_away_fails_calls_fast_and_reconnects ____________
+------------------------------ Captured log call -------------------------------
+ERROR    websocket:_logging.py:92 Connection closed normally (code 1000) - goodbye
+_______________ test_status_summarises_everything_a_human_needs ________________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_drive [over_speed_linear]: linear speed 9.00 m/s exceeds the limit of 0.50 m/s | args={"linear": 9}
+____________________ test_tools_never_raise_on_garbage_args ____________________
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_drive [interlock_not_applied]: this call was not vetted by the hermes-ros safety interlock (pre_tool_call hook did not run); refusing to act | args={}
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_drive [interlock_not_applied]: this call was not vetted by the hermes-ros safety interlock (pre_tool_call hook did not run); refusing to act | args={}
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_drive [interlock_not_applied]: this call was not vetted by the hermes-ros safety interlock (pre_tool_call hook did not run); refusing to act | args={}
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_drive [interlock_not_applied]: this call was not vetted by the hermes-ros safety interlock (pre_tool_call hook did not run); refusing to act | args={"topic": 5, "linear": [1], "duration_s": "soon"}
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_publish [interlock_not_applied]: this call was not vetted by the hermes-ros safety interlock (pre_tool_call hook did not run); refusing to act | args={}
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_publish [interlock_not_applied]: this call was not vetted by the hermes-ros safety interlock (pre_tool_call hook did not run); refusing to act | args={}
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_publish [interlock_not_applied]: this call was not vetted by the hermes-ros safety interlock (pre_tool_call hook did not run); refusing to act | args={}
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_publish [interlock_not_applied]: this call was not vetted by the hermes-ros safety interlock (pre_tool_call hook did not run); refusing to act | args={"topic": 5, "linear": [1], "duration_s": "soon"}
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_call_service [interlock_not_applied]: this call was not vetted by the hermes-ros safety interlock (pre_tool_call hook did not run); refusing to act | args={}
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_call_service [interlock_not_applied]: this call was not vetted by the hermes-ros safety interlock (pre_tool_call hook did not run); refusing to act | args={}
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_call_service [interlock_not_applied]: this call was not vetted by the hermes-ros safety interlock (pre_tool_call hook did not run); refusing to act | args={}
+WARNING  hermes_ros.interlock:safety.py:197 BLOCKED ros_call_service [interlock_not_applied]: this call was not vetted by the hermes-ros safety interlock (pre_tool_call hook did not run); refusing to act | args={"topic": 5, "linear": [1], "duration_s": "soon"}
+=========================== short test summary info ============================
+PASSED live/test_live_rosbridge.py::test_discovery_sees_the_turtlesim_graph
+PASSED live/test_live_rosbridge.py::test_echo_and_pose
+PASSED live/test_live_rosbridge.py::test_camera_snapshot_from_real_image_topic
+PASSED live/test_live_rosbridge.py::test_drive_changes_real_pose
+PASSED live/test_live_rosbridge.py::test_robot_actually_stops_after_command
+PASSED live/test_live_rosbridge.py::test_interlock_blocks_overspeed_and_turtle_does_not_move
+PASSED live/test_live_rosbridge.py::test_geofence_with_live_pose_blocks_wall_run
+PASSED live/test_live_rosbridge.py::test_topic_and_service_allowlists
+PASSED live/test_live_rosbridge.py::test_estop_latch_end_to_end
+PASSED live/test_live_rosbridge.py::test_drive_to_the_cone_by_looking
+PASSED test_imaging.py::test_png_roundtrip_header
+PASSED test_imaging.py::test_ros_image_message_rgb8_and_bgr8_and_mono_decode
+PASSED test_imaging.py::test_unsupported_encoding_is_a_clear_error
+PASSED test_imaging.py::test_parse_pose_odometry_quaternion
+PASSED test_interlock.py::test_overspeed_linear_is_blocked_and_robot_does_not_move
+PASSED test_interlock.py::test_overspeed_angular_is_blocked
+PASSED test_interlock.py::test_over_duration_is_blocked
+PASSED test_interlock.py::test_clamp_mode_slows_instead_of_blocking
+PASSED test_interlock.py::test_missing_duration_gets_a_bounded_default
+PASSED test_interlock.py::test_negative_and_nan_values_are_handled
+PASSED test_interlock.py::test_zero_twist_is_always_allowed_even_when_latched
+PASSED test_interlock.py::test_estop_latch_blocks_motion_until_human_clears
+PASSED test_interlock.py::test_estop_latch_survives_restart
+PASSED test_interlock.py::test_topic_allowlist_blocks_other_publishers
+PASSED test_interlock.py::test_motion_topic_cannot_dodge_the_allowlist_by_renaming
+PASSED test_interlock.py::test_unreadable_motion_message_is_refused
+PASSED test_interlock.py::test_publish_overspeed_through_raw_topic_is_blocked
+PASSED test_interlock.py::test_diagonal_linear_speed_counts_all_axes
+PASSED test_interlock.py::test_service_allowlist
+PASSED test_interlock.py::test_geofence_blocks_path_leaving_the_box
+PASSED test_interlock.py::test_geofence_allows_a_move_that_stays_inside
+PASSED test_interlock.py::test_geofence_considers_turning_arcs
+PASSED test_interlock.py::test_geofence_fails_closed_without_odometry
+PASSED test_interlock.py::test_geofence_fails_closed_on_stale_odometry
+PASSED test_interlock.py::test_interlock_crash_fails_closed
+PASSED test_interlock.py::test_handlers_refuse_to_act_when_the_hook_did_not_run
+PASSED test_interlock.py::test_agent_supplied_interlock_token_is_overwritten_by_the_hook
+PASSED test_interlock.py::test_every_blocked_call_is_logged_with_reason
+PASSED test_interlock.py::test_runtime_geofence_abort_stops_robot
+PASSED test_registration.py::test_registered_tools_match_manifest
+PASSED test_registration.py::test_every_tool_has_schema_handler_toolset
+PASSED test_registration.py::test_required_params_exist_in_properties
+PASSED test_registration.py::test_pre_tool_call_hook_registered_and_accepts_kwargs
+PASSED test_registration.py::test_skill_and_command_registered
+PASSED test_registration.py::test_register_opens_no_connections
+PASSED test_registration.py::test_manifest_basics
+PASSED test_registration.py::test_config_schema_defaults_equal_runtime_defaults
+PASSED test_registration.py::test_user_config_overrides_are_merged_over_defaults
+PASSED test_registration.py::test_broken_config_values_fall_back_safely
+PASSED test_registration.py::test_slash_command_human_controls
+PASSED test_rosbridge_protocol.py::test_discovery_over_the_wire
+PASSED test_rosbridge_protocol.py::test_pose_comes_from_the_odom_feed
+PASSED test_rosbridge_protocol.py::test_drive_publishes_twists_then_zero_twists
+PASSED test_rosbridge_protocol.py::test_blocked_drive_never_reaches_the_wire
+PASSED test_rosbridge_protocol.py::test_one_shot_echo_of_odom_does_not_kill_the_persistent_feed
+PASSED test_rosbridge_protocol.py::test_geofence_uses_live_odom_from_the_wire
+PASSED test_rosbridge_protocol.py::test_service_calls_allowlist_and_failures
+PASSED test_rosbridge_protocol.py::test_unreachable_rosbridge_is_a_clean_error
+PASSED test_rosbridge_protocol.py::test_server_going_away_fails_calls_fast_and_reconnects
+PASSED test_tools_mock.py::test_list_topics_services_nodes
+PASSED test_tools_mock.py::test_echo_odom_and_summarises_big_messages
+PASSED test_tools_mock.py::test_get_pose_reports_xy_yaw
+PASSED test_tools_mock.py::test_drive_straight_changes_pose_as_kinematics_predict
+PASSED test_tools_mock.py::test_turn_in_place_changes_heading
+PASSED test_tools_mock.py::test_robot_is_stopped_after_a_timed_command
+PASSED test_tools_mock.py::test_wall_collision_stops_the_robot_and_reports_it
+PASSED test_tools_mock.py::test_cone_is_solid
+PASSED test_tools_mock.py::test_drive_to_the_red_cone_end_to_end
+PASSED test_tools_mock.py::test_camera_snapshot_is_a_valid_png_file_with_media_hints
+PASSED test_tools_mock.py::test_camera_snapshots_are_pruned
+PASSED test_tools_mock.py::test_camera_inline_mode_returns_multimodal_envelope
+PASSED test_tools_mock.py::test_service_calls
+PASSED test_tools_mock.py::test_unknown_service_is_a_clean_error_not_a_crash
+PASSED test_tools_mock.py::test_publish_non_motion_topic_when_allowlisted
+PASSED test_tools_mock.py::test_publish_timed_twist_moves_robot
+PASSED test_tools_mock.py::test_stop_without_latch_keeps_motion_allowed
+PASSED test_tools_mock.py::test_status_summarises_everything_a_human_needs
+PASSED test_tools_mock.py::test_mock_state_persists_between_runtimes
+PASSED test_tools_mock.py::test_unknown_backend_is_a_clean_error
+PASSED test_tools_mock.py::test_tools_never_raise_on_garbage_args
+80 passed in 20.00s
