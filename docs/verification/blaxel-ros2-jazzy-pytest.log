@@ -217,4 +217,5 @@ PASSED test_tools_mock.py::test_status_summarises_everything_a_human_needs
 PASSED test_tools_mock.py::test_mock_state_persists_between_runtimes
 PASSED test_tools_mock.py::test_unknown_backend_is_a_clean_error
 PASSED test_tools_mock.py::test_tools_never_raise_on_garbage_args
-80 passed in 20.00s
+SKIPPED [1] test_dashboard_api.py:8: could not import 'fastapi': No module named 'fastapi'
+80 passed, 1 skipped in 19.58s

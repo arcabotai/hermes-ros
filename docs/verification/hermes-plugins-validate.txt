@@ -1,7 +1,3 @@
-  → Resolving Python dependencies…
-  ✓ Resolving Python dependencies
-  → Installing Python dependencies…
-  ✓ Installing Python dependencies
 
 ✓ manifest — plugin.yaml parses
 ✓ manifest fields — name, version, description present
@@ -19,5 +15,6 @@
 ✓ security scan — safe
 ✓ no core override — no runtime rebinds of Hermes core
 ◆ Isolation — runs in the plugin host (plugins.isolation: host)
+  · dashboard backend API is served through the plugin host (buffered responses)
 
 Validation passed.
