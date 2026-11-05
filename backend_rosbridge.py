@@ -88,12 +88,16 @@ class RosbridgeBackend(Backend):
                 ros.connect(timeout=self.connect_timeout)
             except Exception as exc:
                 ros.close()
-                hint = ("Is rosbridge_server listening with TLS, and does the certificate match this host? "
-                        if self.endpoint["tls"] else
-                        "Is rosbridge_server running and the host/port in plugin settings correct?")
-                message = f"cannot reach rosbridge at {self.endpoint['url']} ({type(exc).__name__}: {exc}). {hint}"
+                message = f"cannot reach rosbridge at {self.endpoint['url']} ({type(exc).__name__}: {exc})."
+                # A missing CA file or a failed certificate check already says why. Don't add a
+                # "is the server up?" hint on top of that.
+                explained = "ca_file" in str(exc) or "TLS verification failed" in str(exc)
+                if not explained:
+                    message += (" Is rosbridge_server listening with TLS, and does the certificate match this host?"
+                                if self.endpoint["tls"] else
+                                " Is rosbridge_server running and the host/port in plugin settings correct?")
                 if self.endpoint["warning"]:
-                    message = f"{message} {self.endpoint['warning']}"
+                    message += " " + self.endpoint["warning"]
                 raise BackendError(message) from exc
             self._ros = ros
             self._pubs.clear()

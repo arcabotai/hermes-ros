@@ -156,6 +156,7 @@ def test_missing_ca_file_fails_closed_before_a_handshake(certs, tmp_path):
         failed = bot.call("ros_call_service", {"service": "/reset"})
         assert failed["ok"] is False
         assert "ca_file" in failed["error"] and "cannot be disabled" in failed["error"]
+        assert "listening with TLS" not in failed["error"]
         assert fake.client_sockets == []
         assert not _saw_service(fake)
     finally:
