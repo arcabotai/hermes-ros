@@ -13,6 +13,10 @@ thing in one command with **no ROS, no Docker and no robot** — and so CI can t
 > "Drive to the red cone." → the agent looks through the camera, turns toward the cone, drives in small verified steps and
 > reports what it sees. "Floor it into the wall." → *blocked: linear speed 3.00 m/s exceeds the limit of 0.50 m/s*.
 
+**The Robot tab in `hermes dashboard`** (read-only: live camera frame, pose, active limits, e-stop state and the blocked-call log):
+
+![Hermes dashboard Robot tab showing the camera frame with the red cone, pose, safety limits and a blocked 3 m/s call](docs/img/dashboard-robot-tab.png)
+
 | Camera at start (mock) | Camera after the approach | Top-down path (mock) |
 |---|---|---|
 | ![](docs/img/mock-camera-start.png) | ![](docs/img/mock-camera-at-cone.png) | ![](docs/img/mock-topdown.png) |
