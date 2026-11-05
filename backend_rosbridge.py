@@ -150,6 +150,19 @@ class RosbridgeBackend(Backend):
     def _first_message(self, topic: str, msg_type: Optional[str], timeout: float, **kw: Any) -> Dict[str, Any]:
         import roslibpy
         ros = self._client()
+        if self._odom_key is not None and topic == self._odom_key[0] and not kw:
+            # rosbridge drops *every* subscription of this client on a topic when one of them unsubscribes, so a
+            # one-shot subscribe/unsubscribe here would silently kill the persistent odometry feed the safety
+            # interlock depends on. Serve the request from that feed instead.
+            t0 = time.time()
+            self._ensure_odom()
+            deadline = t0 + timeout
+            while time.time() < deadline:
+                last = self._odom_last
+                if last is not None and last[1] >= t0:
+                    return dict(last[0])
+                time.sleep(0.02)
+            raise BackendError(f"no message on {topic} within {timeout:.1f}s (nothing publishing? wrong type {msg_type}?)")
         msg_type = msg_type or self._topic_type(topic)
         got: Dict[str, Any] = {}
         ev = threading.Event()
@@ -224,6 +237,19 @@ class RosbridgeBackend(Backend):
             if self._odom_last is None:
                 return None
             msg, ts = self._odom_last
+            if time.time() - ts > 2.0:  # feed went quiet: resubscribe once before reporting stale data
+                try:
+                    self._odom_sub.unsubscribe()
+                except Exception:
+                    pass
+                self._odom_key, self._odom_sub, self._odom_last = None, None, None
+                self._ensure_odom()
+                deadline = time.time() + 1.5
+                while self._odom_last is None and time.time() < deadline:
+                    time.sleep(0.05)
+                if self._odom_last is None:
+                    return None
+                msg, ts = self._odom_last
             pose = parse_pose(msg)
             pose["age_s"] = round(time.time() - ts, 3)
             pose["source"] = f"rosbridge:{self._odom_key[0] if self._odom_key else '?'}"
