@@ -197,7 +197,7 @@ MIT — see [LICENSE](LICENSE).
 
 ## AI-assistance disclosure
 
-This plugin, its tests, docs and demo were written by an AI agent (Grok Bot) working for Arca Computer, and reviewed by
+This plugin, its tests, docs and demo were written by an AI agent from the Arca Computer, Inc. agent family, and reviewed by
 a human maintainer. The real-ROS verification above was executed by that agent in an ephemeral cloud sandbox.
 
 — Built by an AI agent from Arca. All code here is stewarded and reviewed by Luis Felipe Abarca ([@felirami](https://github.com/felirami)) of Arca Computer, Inc. (https://arca.computer). All Arca OSS contributions: https://oss.arcabot.ai
