@@ -1,6 +1,6 @@
-"""Real robot / simulator backend: talks to a rosbridge websocket through ``roslibpy``.
+"""Real robot / simulator backend: talks to a rosbridge websocket through the small built-in client in ``rosbridge_client.py``.
 
-The Hermes host needs no ROS install. ``roslibpy`` is imported lazily and the websocket is opened on the
+The Hermes host needs no ROS install. ``websocket-client`` is imported lazily and the websocket is opened on the
 first tool call (never while the plugin registers), so ``hermes plugins doctor`` and CI stay offline.
 Works with ROS 1 and ROS 2 rosbridge servers (``rosbridge_server`` / ``rosapi`` must be running).
 """
@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from . import imaging
 from .backend_base import Backend, BackendError
+from .rosbridge_client import RosbridgeClient
 
 
 def _quat_to_yaw(q: Dict[str, float]) -> float:
@@ -69,34 +70,32 @@ class RosbridgeBackend(Backend):
             if self._ros is not None and self._ros.is_connected:
                 return self._ros
             try:
-                import roslibpy  # lazy: keeps registration offline and import-cheap
+                import websocket  # noqa: F401  (websocket-client; checked here so the error is actionable)
             except ImportError as exc:
-                raise BackendError("roslibpy is not installed (pip install 'roslibpy>=2.0,<3')") from exc
-            ros = roslibpy.Ros(host=self.host, port=self.port)
+                raise BackendError("websocket-client is not installed (pip install 'websocket-client>=1.6,<2')") from exc
+            ros = RosbridgeClient(self.host, self.port)
             try:
-                ros.run(timeout=self.connect_timeout)
+                ros.connect(timeout=self.connect_timeout)
             except Exception as exc:
-                try:
-                    ros.terminate()
-                except Exception:
-                    pass
+                ros.close()
                 raise BackendError(f"cannot reach rosbridge at ws://{self.host}:{self.port} ({type(exc).__name__}: {exc}). "
                                    "Is rosbridge_server running and the host/port in plugin settings correct?") from exc
             self._ros = ros
             self._pubs.clear()
             self._odom_sub = None
+            self._odom_key = None
             return ros
 
     def close(self) -> None:
         with self._lock:
             try:
-                if self._odom_sub is not None:
-                    self._odom_sub.unsubscribe()
+                if self._odom_sub is not None and self._ros is not None:
+                    self._ros.unsubscribe(self._odom_sub[0], self._odom_sub[1])
             except Exception:
                 pass
             try:
                 if self._ros is not None:
-                    self._ros.terminate()
+                    self._ros.close()
             except Exception:
                 pass
             self._ros, self._pubs, self._odom_sub = None, {}, None
@@ -107,13 +106,11 @@ class RosbridgeBackend(Backend):
 
     # ---------------------------------------------------------------- helpers
     def _svc(self, name: str, typ: str, req: Optional[Dict[str, Any]] = None, timeout: Optional[float] = None) -> Dict[str, Any]:
-        import roslibpy
         ros = self._client()
         try:
-            res = roslibpy.Service(ros, name, typ).call(roslibpy.ServiceRequest(req or {}), timeout=timeout or self.call_timeout)
+            return ros.call_service(name, typ, req or {}, timeout=timeout or self.call_timeout)
         except Exception as exc:
             raise BackendError(f"service {name} failed: {type(exc).__name__}: {exc}") from exc
-        return dict(res) if res is not None else {}
 
     def _topic_type(self, topic: str) -> str:
         res = self._svc("/rosapi/topic_type", "rosapi/TopicType", {"topic": topic})
@@ -148,7 +145,6 @@ class RosbridgeBackend(Backend):
 
     # ------------------------------------------------------------------- data
     def _first_message(self, topic: str, msg_type: Optional[str], timeout: float, **kw: Any) -> Dict[str, Any]:
-        import roslibpy
         ros = self._client()
         if self._odom_key is not None and topic == self._odom_key[0] and not kw:
             # rosbridge drops *every* subscription of this client on a topic when one of them unsubscribes, so a
@@ -172,14 +168,13 @@ class RosbridgeBackend(Backend):
                 got["m"] = dict(m)
                 ev.set()
 
-        sub = roslibpy.Topic(ros, topic, msg_type, queue_length=1, **kw)
-        sub.subscribe(cb)
+        sid = ros.subscribe(topic, msg_type, cb, queue_length=1, **kw)
         try:
             if not ev.wait(timeout):
                 raise BackendError(f"no message on {topic} within {timeout:.1f}s (nothing publishing? wrong type {msg_type}?)")
         finally:
             try:
-                sub.unsubscribe()
+                ros.unsubscribe(topic, sid)
             except Exception:
                 pass
         return got["m"]
@@ -188,14 +183,8 @@ class RosbridgeBackend(Backend):
         return self._first_message(topic, msg_type, timeout)
 
     def publish(self, topic: str, msg_type: str, message: Dict[str, Any]) -> None:
-        import roslibpy
         ros = self._client()
-        key = (topic, msg_type)
-        pub = self._pubs.get(key)
-        if pub is None:
-            pub = roslibpy.Topic(ros, topic, msg_type)
-            self._pubs[key] = pub
-        pub.publish(roslibpy.Message(message))
+        ros.publish(topic, msg_type, message)
 
     def call_service(self, service: str, srv_type: Optional[str], request: Dict[str, Any], timeout: float) -> Dict[str, Any]:
         if not srv_type:
@@ -206,7 +195,6 @@ class RosbridgeBackend(Backend):
         return self._svc(service, srv_type, request, timeout=timeout)
 
     def _ensure_odom(self) -> None:
-        import roslibpy
         topic = self.topics_cfg.get("odom", "/odom")
         mtype = self.topics_cfg.get("odom_type") or self._topic_type(topic)
         key = (topic, mtype)
@@ -216,15 +204,14 @@ class RosbridgeBackend(Backend):
                 return
             if self._odom_sub is not None:
                 try:
-                    self._odom_sub.unsubscribe()
+                    ros.unsubscribe(self._odom_sub[0], self._odom_sub[1])
                 except Exception:
                     pass
 
             def cb(m: Dict[str, Any]) -> None:
                 self._odom_last = (dict(m), time.time())
 
-            self._odom_sub = roslibpy.Topic(ros, topic, mtype, queue_length=1, throttle_rate=50)
-            self._odom_sub.subscribe(cb)
+            self._odom_sub = (topic, ros.subscribe(topic, mtype, cb, queue_length=1, throttle_rate=50))
             self._odom_key = key
             self._odom_last = None
 
@@ -239,7 +226,7 @@ class RosbridgeBackend(Backend):
             msg, ts = self._odom_last
             if time.time() - ts > 2.0:  # feed went quiet: resubscribe once before reporting stale data
                 try:
-                    self._odom_sub.unsubscribe()
+                    self._client().unsubscribe(self._odom_sub[0], self._odom_sub[1])
                 except Exception:
                     pass
                 self._odom_key, self._odom_sub, self._odom_last = None, None, None

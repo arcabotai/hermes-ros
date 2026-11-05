@@ -1,7 +1,7 @@
 name: hermes-ros
 version: 0.1.0
 description: >-
-  Drive and observe ROS / ROS 2 robots from Hermes over rosbridge (roslibpy): list topics,
+  Drive and observe ROS / ROS 2 robots from Hermes over rosbridge: list topics,
   echo, drive, call services, read odometry, grab camera frames for vision - behind a
   pre_tool_call safety interlock (speed/duration limits, geofence, write allowlist, e-stop
   latch). Ships a mock robot so it runs with no ROS at all.
@@ -24,7 +24,7 @@ provides_tools:
 provides_hooks:
   - pre_tool_call
 python_dependencies:
-  - "roslibpy>=1.7,<3"
+  - "websocket-client>=1.6,<2"
 config_schema:
   backend:
     type: str

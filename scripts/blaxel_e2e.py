@@ -41,7 +41,7 @@ nohup chroot /ros /bin/bash /opt/hermes-ros/docker/run_demo.sh > $L/demo.log 2>&
 chroot /ros /bin/bash -c 'for i in $(seq 1 60); do python3 -c "import socket;socket.create_connection((\"127.0.0.1\",9090),1)" 2>/dev/null && exit 0; sleep 1; done; exit 1' || { tail -20 $L/demo.log; exit 1; }
 sleep 4; tail -5 $L/demo.log
 say "6/6 pytest: unit + live (real ROS 2 over rosbridge)"
-chroot /ros /bin/bash -c 'python3 -m venv /opt/venv && /opt/venv/bin/pip install -q roslibpy pytest pyyaml && mkdir -p /tmp/artifacts && cd /opt/hermes-ros/tests && HERMES_ROS_ARTIFACTS=/tmp/artifacts HERMES_ROS_LIVE=127.0.0.1:9090 /opt/venv/bin/python -m pytest -rA -p no:cacheprovider' 2>&1 | tee $L/pytest.log | grep -E "PASSED|FAILED|ERROR|passed|failed|error" | sed 's/^PASSED /  ok  /'
+chroot /ros /bin/bash -c 'python3 -m venv /opt/venv && /opt/venv/bin/pip install -q websocket-client websockets pytest pyyaml && mkdir -p /tmp/artifacts && cd /opt/hermes-ros/tests && HERMES_ROS_ARTIFACTS=/tmp/artifacts HERMES_ROS_LIVE=127.0.0.1:9090 /opt/venv/bin/python -m pytest -rA -p no:cacheprovider' 2>&1 | tee $L/pytest.log | grep -E "PASSED|FAILED|ERROR|passed|failed|error" | sed 's/^PASSED /  ok  /'
 RC=${PIPESTATUS[0]}
 cd /ros/tmp/artifacts 2>/dev/null && tar -czf /tmp/artifacts.tgz . ; cp /ros/tmp/artifacts.tgz /tmp/ 2>/dev/null
 grep -qE "[0-9]+ (failed|errors?)( |,|$)" $L/pytest.log && RC=1
