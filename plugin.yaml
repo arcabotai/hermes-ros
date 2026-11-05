@@ -1,0 +1,75 @@
+name: hermes-ros
+version: 0.1.0
+description: >-
+  Drive and observe ROS / ROS 2 robots from Hermes over rosbridge (roslibpy): list topics,
+  echo, drive, call services, read odometry, grab camera frames for vision - behind a
+  pre_tool_call safety interlock (speed/duration limits, geofence, write allowlist, e-stop
+  latch). Ships a mock robot so it runs with no ROS at all.
+author: Arca Computer (arcabotai)
+license: MIT
+homepage: https://github.com/arcabotai/hermes-ros
+manifest_version: 2
+requires_hermes: ">=0.21.6"
+tags: [robotics, ros, ros2, rosbridge, safety, simulation]
+provides_tools:
+  - ros_list
+  - ros_echo
+  - ros_drive
+  - ros_publish
+  - ros_call_service
+  - ros_get_pose
+  - ros_camera_snapshot
+  - ros_stop
+  - ros_status
+provides_hooks:
+  - pre_tool_call
+python_dependencies:
+  - "roslibpy>=1.7,<3"
+config_schema:
+  backend:
+    type: str
+    choices: [mock, rosbridge]
+    default: mock
+    label: Backend
+    description: "mock = built-in 2D sim (no ROS needed); rosbridge = a real robot or simulator via a rosbridge websocket"
+  rosbridge:
+    type: dict
+    label: Rosbridge connection
+    description: "host, port, connect_timeout_s, call_timeout_s (used when backend=rosbridge)"
+    default: {host: localhost, port: 9090, connect_timeout_s: 6.0, call_timeout_s: 8.0}
+  topics:
+    type: dict
+    label: Topics
+    description: "cmd_vel, cmd_vel_type (geometry_msgs/Twist or TwistStamped), odom, odom_type, camera"
+    default: {cmd_vel: /cmd_vel, cmd_vel_type: geometry_msgs/Twist, odom: /odom, odom_type: nav_msgs/Odometry, camera: /camera/image_raw}
+  safety:
+    type: dict
+    label: Safety interlock
+    description: "max_linear_mps, max_angular_rps, max_duration_s, default_duration_s, over_limit_action (block|clamp), geofence{...}, write_allowlist{topics,services}"
+    default:
+      max_linear_mps: 0.5
+      max_angular_rps: 1.0
+      max_duration_s: 5.0
+      default_duration_s: 1.0
+      over_limit_action: block
+      max_publish_rate_hz: 30.0
+      geofence: {enabled: false, x_min: -4.0, x_max: 4.0, y_min: -4.0, y_max: 4.0, max_odom_age_s: 5.0, margin_m: 0.25}
+      write_allowlist: {topics: [/cmd_vel], services: ["/mock/*"]}
+      motion_topic_patterns: ["*cmd_vel*"]
+      blocked_log_max: 500
+  camera:
+    type: dict
+    label: Camera snapshots
+    description: "timeout_s, output_dir, keep_last, return_mode (path|inline)"
+    default: {timeout_s: 6.0, output_dir: "", keep_last: 20, return_mode: path}
+  mock:
+    type: dict
+    label: Mock robot
+    description: "half_x, half_y, start{x,y,yaw}, cones[{x,y}], realtime, persist"
+    default:
+      half_x: 5.0
+      half_y: 5.0
+      start: {x: 0.0, y: 0.0, yaw: 0.0}
+      cones: [{x: 3.0, y: 2.0}]
+      realtime: false
+      persist: true
