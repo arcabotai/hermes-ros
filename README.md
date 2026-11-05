@@ -73,6 +73,11 @@ suite against it, copies back logs and camera frames, and deletes the sandbox �
 | `ros_call_service` | Call an **allowlisted** service |
 | `ros_stop` | Zero-velocity burst; `estop=true` also latches the e-stop |
 
+**Dashboard tab (optional, read-only).** `hermes dashboard` shows a **Robot** tab: the latest camera frame, pose, active
+limits, e-stop state and the blocked-call log, refreshed every 1.5 s. It only *reads* files the plugin already writes
+(it has no controls on purpose: the e-stop latch is cleared by a human with `/ros clear`, never from a web button).
+Its API is mounted under `/api/plugins/hermes-ros/` and needs the dashboard session token like every plugin route.
+
 A bundled skill, `ros-safe-operation`, teaches the agent the pre-flight checklist, the *look → one small move → verify*
 loop, how to read refusals, and e-stop discipline.
 
@@ -154,8 +159,8 @@ plugins:
   (`ws://<rosbridge.host>:<rosbridge.port>`, default `localhost:9090`) and talks only to it, lazily on the first tool call —
   nothing is opened at import or registration time. In `mock` mode (the default) it makes **no network connections**.
 * **Files written** (all under `<HERMES_HOME>/plugin-data/<plugin>/` unless you set `camera.output_dir`): camera snapshots
-  (`snapshots/`, pruned to `keep_last`), the blocked-call audit log (`blocked.jsonl`), the e-stop latch (`estop.json`) and,
-  in mock mode, the simulated pose (`mock_state.json`).
+  (`snapshots/`, pruned to `keep_last`), the blocked-call audit log (`blocked.jsonl`), the e-stop latch (`estop.json`), the last pose (`last_pose.json`, read by the dashboard tab) and,
+  in mock mode, the simulated pose (`mock_state.json`). The dashboard tab only reads these.
 * **Credentials:** none. The rosbridge websocket is unauthenticated, as rosbridge usually is; keep it on a trusted network.
 * **Dependencies:** `websocket-client` (pure Python; already part of Hermes's lock). No ROS installation is needed on the Hermes host.
 * **Physical effects:** with a real robot attached, the agent can move it. Read [Safety model](#safety-model).
@@ -166,10 +171,11 @@ Everything below was actually run (logs in [`docs/verification/`](docs/verificat
 
 | Check | Result |
 |---|---|
-| `pytest tests` (interlock, mock tools, registration, imaging, rosbridge protocol against an in-process fake server) | **70 passed**, 10 skipped (live) |
-| Same suite + live tests against **real ROS 2 Jazzy + rosbridge_server + turtlesim** in a Blaxel sandbox (`scripts/blaxel_e2e.py`) | **80 passed** — incl. real `Image` + `CompressedImage` snapshots, drive/stop, over-speed and geofence blocks, allowlists, e-stop latch, closed-loop drive to the cone |
+| `pytest tests` (interlock, mock tools, registration, imaging, rosbridge protocol against an in-process fake server) | **74 passed**, 10 skipped (live) |
+| Same suite + live tests against **real ROS 2 Jazzy + rosbridge_server + turtlesim** in a Blaxel sandbox (`scripts/blaxel_e2e.py`) | **84 passed** (74 + 10 live) — incl. real `Image` + `CompressedImage` snapshots, drive/stop, over-speed and geofence blocks, allowlists, e-stop latch, closed-loop drive to the cone |
 | `hermes plugins validate <clone> --install-deps` | Validation passed (all checks ✓, security scan "safe") |
 | `hermes plugins doctor <installed>` | OK: discovery, manifest, import, registration — 9 tools, 1 hook |
+| Dashboard API under the real `hermes dashboard` | `GET /api/plugins/hermes-ros/state` → 401 without the session token, 200 with it (pose, limits, blocked calls); tab JS syntax-checked, **not visually screenshotted** |
 | `hermes plugins install arcabotai/hermes-ros` + `enable` in a throwaway `HERMES_HOME`, then a scripted `hermes chat` turn against the mock | agent snapshotted, was refused at 3 m/s / 10 s (logged in `blocked.jsonl`), retried within limits |
 
 Run the tests yourself: `pip install -r requirements-dev.txt && cd tests && python -m pytest`
