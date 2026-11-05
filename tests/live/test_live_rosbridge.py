@@ -28,6 +28,7 @@ def overrides():
         "rosbridge": {"host": host, "port": int(port or 9090)},
         "topics": {"cmd_vel": "/turtle1/cmd_vel", "odom": "/turtle1/pose", "odom_type": "turtlesim/msg/Pose",
                    "camera": "/camera/image_raw"},
+        "camera": {"output_dir": os.environ.get("HERMES_ROS_ARTIFACTS", ""), "keep_last": 200},
         "safety": {"max_linear_mps": 1.0, "max_angular_rps": 1.5, "max_duration_s": 6.0,
                    "write_allowlist": {"topics": ["/turtle1/cmd_vel"], "services": ["/turtle1/teleport_absolute"]},
                    "geofence": {"enabled": True, "x_min": 1.0, "x_max": 10.0, "y_min": 1.0, "y_max": 10.0,
@@ -46,6 +47,7 @@ def bot(tmp_path_factory):
 def teleport(bot, x, y, th):
     r = bot.call("ros_call_service", {"service": "/turtle1/teleport_absolute", "request": {"x": x, "y": y, "theta": th}})
     assert r["ok"], r
+    bot.rt.backend().sleep(0.4)  # let the pose feed catch up with the teleport (a robot cannot teleport in real life)
 
 
 def pose(bot):
