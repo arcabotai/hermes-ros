@@ -100,11 +100,11 @@ class MockBackend(Backend):
             pass
 
     # --------------------------------------------------------------- physics
-    def _blocked_at(self, nx: float, ny: float) -> Optional[str]:
-        if abs(nx) > self.half_x - ROBOT_RADIUS or abs(ny) > self.half_y - ROBOT_RADIUS:
+    def _blocked_at(self, nx: float, ny: float, margin: float = 0.0) -> Optional[str]:
+        if abs(nx) > self.half_x - ROBOT_RADIUS - margin or abs(ny) > self.half_y - ROBOT_RADIUS - margin:
             return "wall"
         for cx, cy in self.cones:
-            if math.hypot(nx - cx, ny - cy) < ROBOT_RADIUS + CONE_RADIUS:
+            if math.hypot(nx - cx, ny - cy) < ROBOT_RADIUS + CONE_RADIUS + margin:
                 return "cone"
         return None
 
@@ -119,15 +119,15 @@ class MockBackend(Backend):
             self.collided = hit
             self.v = 0.0
         else:
-            if lin != 0.0:
-                self.collided = None
+            if lin != 0.0 and not self._blocked_at(nx, ny, margin=0.02):
+                self.collided = None  # only once clearly free again (avoids flicker at the contact boundary)
             self.x, self.y, self.v = nx, ny, lin
         self.yaw = _wrap(self.yaw + ang * dt)
         self.t += dt
 
     def _advance(self, seconds: float) -> None:
         remaining = seconds
-        while remaining > 1e-9:
+        while remaining > 1e-6:  # ignore float-dust slivers; they would nudge the robot out of a contact
             dt = min(SIM_DT, remaining)
             self._step(dt)
             remaining -= dt

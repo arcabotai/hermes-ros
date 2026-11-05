@@ -98,10 +98,11 @@ def _run_timed(rt: Runtime, topic: str, msg_type: str, message: Dict[str, Any], 
 def make_handlers(rt: Runtime) -> Dict[str, Callable[..., str]]:
     def guarded(fn: Callable[[Dict[str, Any]], str]) -> Callable[..., str]:
         def handler(args: Dict[str, Any], **kwargs: Any) -> str:
+            args = args if isinstance(args, dict) else {}
             try:
-                return fn(args if isinstance(args, dict) else {})
+                return fn(args)
             except Blocked as b:
-                rt.interlock.record_block(fn.__name__, args or {}, b.rule, b.reason)
+                rt.interlock.record_block(fn.__name__, args, b.rule, b.reason)
                 return _err(f"hermes-ros interlock BLOCKED [{b.rule}]: {b.reason}")
             except BackendError as exc:
                 return _err(str(exc))

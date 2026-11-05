@@ -1,0 +1,3 @@
+pytest>=8
+roslibpy>=1.7,<3
+pyyaml
