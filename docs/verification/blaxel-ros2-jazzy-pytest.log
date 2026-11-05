@@ -1,5 +1,5 @@
-........................................................................ [ 90%]
-........                                                                 [100%]
+........................................................................ [ 84%]
+.............                                                            [100%]
 ==================================== PASSES ====================================
 ___________ test_interlock_blocks_overspeed_and_turtle_does_not_move ___________
 ------------------------------ Captured log call -------------------------------
@@ -151,6 +151,11 @@ PASSED test_imaging.py::test_png_roundtrip_header
 PASSED test_imaging.py::test_ros_image_message_rgb8_and_bgr8_and_mono_decode
 PASSED test_imaging.py::test_unsupported_encoding_is_a_clear_error
 PASSED test_imaging.py::test_parse_pose_odometry_quaternion
+PASSED test_imaging.py::test_cone_in_view_shows_red_pixels
+PASSED test_imaging.py::test_cone_out_of_view_shows_no_red
+PASSED test_imaging.py::test_cone_hidden_by_geometry_is_not_drawn_through_a_wall
+PASSED test_imaging.py::test_cone_outside_fov_edge_is_consistent_with_hfov
+PASSED test_imaging.py::test_default_spawn_has_the_cone_in_the_first_snapshot_and_it_stays_in_view_when_driving_straight
 PASSED test_interlock.py::test_overspeed_linear_is_blocked_and_robot_does_not_move
 PASSED test_interlock.py::test_overspeed_angular_is_blocked
 PASSED test_interlock.py::test_over_duration_is_blocked
@@ -218,4 +223,4 @@ PASSED test_tools_mock.py::test_mock_state_persists_between_runtimes
 PASSED test_tools_mock.py::test_unknown_backend_is_a_clean_error
 PASSED test_tools_mock.py::test_tools_never_raise_on_garbage_args
 SKIPPED [1] test_dashboard_api.py:8: could not import 'fastapi': No module named 'fastapi'
-80 passed, 1 skipped in 19.58s
+85 passed, 1 skipped in 19.80s

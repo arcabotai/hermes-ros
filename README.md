@@ -171,8 +171,8 @@ Everything below was actually run (logs in [`docs/verification/`](docs/verificat
 
 | Check | Result |
 |---|---|
-| `pytest tests` (interlock, mock tools, registration, imaging, rosbridge protocol against an in-process fake server) | **74 passed**, 10 skipped (live) |
-| Same suite + live tests against **real ROS 2 Jazzy + rosbridge_server + turtlesim** in a Blaxel sandbox (`scripts/blaxel_e2e.py`) | **80 passed**, 1 skipped (the dashboard-API test module needs fastapi, absent in the sandbox) — incl. real `Image` + `CompressedImage` snapshots, drive/stop, over-speed and geofence blocks, allowlists, e-stop latch, closed-loop drive to the cone |
+| `pytest tests` (interlock, mock tools, registration, imaging, rosbridge protocol against an in-process fake server) | **79 passed**, 10 skipped (live) |
+| Same suite + live tests against **real ROS 2 Jazzy + rosbridge_server + turtlesim** in a Blaxel sandbox (`scripts/blaxel_e2e.py`) | **85 passed**, 1 skipped (the dashboard-API test module needs fastapi, absent in the sandbox) — incl. real `Image` + `CompressedImage` snapshots, drive/stop, over-speed and geofence blocks, allowlists, e-stop latch, closed-loop drive to the cone |
 | `hermes plugins validate <clone> --install-deps` | Validation passed (all checks ✓, security scan "safe") |
 | `hermes plugins doctor <installed>` | OK: discovery, manifest, import, registration — 9 tools, 1 hook |
 | Dashboard API under the real `hermes dashboard` | `GET /api/plugins/hermes-ros/state` → 401 without the session token, 200 with it (pose, limits, blocked calls); tab JS syntax-checked, **not visually screenshotted** |
