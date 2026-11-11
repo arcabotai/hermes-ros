@@ -13,6 +13,10 @@ thing in one command with **no ROS, no Docker and no robot** — and so CI can t
 > "Drive to the red cone." → the agent looks through the camera, turns toward the cone, drives in small verified steps and
 > reports what it sees. "Floor it into the wall." → *blocked: linear speed 3.00 m/s exceeds the limit of 0.50 m/s*.
 
+**A real Hermes session driving a TurtleBot3 in Gazebo** (ROS 2 Humble, over rosbridge; see [TurtleBot3 quickstart](#quickstart-turtlebot3-in-gazebo)). The agent read the lidar and camera, drove 1 m and turned left, and its "2 m/s for 10 s" request was blocked by the interlock:
+
+![Hermes chat on the right driving a TurtleBot3 waffle in Gazebo on the left; the 2 m/s request is blocked and shown in /ros log](docs/img/turtlebot3-gazebo-demo.png)
+
 **The Robot tab in `hermes dashboard`** (read-only: live camera frame, pose, active limits, e-stop state and the blocked-call log):
 
 ![Hermes dashboard Robot tab showing the camera frame with the red cone, pose, safety limits and a blocked 3 m/s call](docs/img/dashboard-robot-tab.png)
@@ -57,8 +61,47 @@ Turtlesim has no camera, so `docker/fake_camera.py` publishes a synthetic `senso
 `CompressedImage` of what the turtle "sees" (a red cone at (8.5, 7.5)). For a real robot, point
 `rosbridge.host` / `topics.*` at it; see [Config reference](#config-reference).
 
-TurtleBot3 on ROS 2 Jazzy expects `geometry_msgs/TwistStamped` on `/cmd_vel`: set `topics.cmd_vel_type: geometry_msgs/msg/TwistStamped`.
-(Gazebo / TurtleBot3 was **not** exercised for this submission; see [Limitations](#limitations).)
+## Quickstart (TurtleBot3 in Gazebo)
+
+The demo video was recorded this way: a real Hermes Agent session driving a TurtleBot3 **waffle** in the Gazebo
+`turtlebot3_world`, over rosbridge, on ROS 2 **Humble** (Gazebo Classic 11). On an Ubuntu 22.04 machine (or chroot / container):
+
+```bash
+# ROS 2 Humble apt repo: https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html
+sudo apt install ros-humble-ros-base ros-humble-rosbridge-server ros-humble-rosapi \
+  ros-humble-turtlebot3-gazebo ros-humble-gazebo-ros-pkgs ros-humble-compressed-image-transport
+
+source /opt/ros/humble/setup.bash
+export TURTLEBOT3_MODEL=waffle          # waffle has the camera; burger does not
+ros2 launch rosbridge_server rosbridge_websocket_launch.xml port:=9090 &
+ros2 launch turtlebot3_gazebo turtlebot3_world.launch.py
+```
+
+Then on the Hermes host:
+
+```bash
+hermes plugins install arcabotai/hermes-ros --enable
+# merge docker/hermes-config.turtlebot3.yaml into ~/.hermes/config.yaml (backend: rosbridge, TurtleBot3 topics, limits)
+hermes chat -t ros
+> What do you see around the robot? Check the lidar and the camera.
+> Drive forward 1 meter, then turn left 90 degrees.
+> Floor it! Full speed, 2 m/s straight ahead for 10 seconds.     # blocked: 2.00 m/s exceeds the limit of 0.25 m/s
+> /ros log
+```
+
+What the robot exposes and how the plugin uses it: `/cmd_vel` (`geometry_msgs/msg/Twist` on Humble) for `ros_drive`,
+`/odom` (`nav_msgs/msg/Odometry`) for poses and the geofence, `/camera/image_raw` for `ros_camera_snapshot`, and
+`/scan` for `ros_echo`, which adds a `scan_summary` to any `LaserScan` (nearest obstacle with its bearing and the
+clearance in eight 45° sectors) so the model gets the whole 360° picture instead of the first 16 raw ranges.
+
+Tips from the recording setup:
+* The stock waffle camera is 1920×1080 at 30 Hz, which is heavy over rosbridge JSON. The demo lowered it to 640×360 at 5 Hz
+  in `turtlebot3_gazebo/models/turtlebot3_waffle/model.sdf` (`<width>`, `<height>`, `<update_rate>` of the `camera` sensor).
+* Headless: run Gazebo under `Xvfb` with `LIBGL_ALWAYS_SOFTWARE=1`. If `gzserver` hangs at start and `/spawn_entity` never
+  appears, make sure `localhost` resolves (an empty `/etc/hosts` in a chroot breaks it) or set
+  `GAZEBO_IP=127.0.0.1 GAZEBO_MASTER_URI=http://127.0.0.1:11345`.
+* **Jazzy / Gazebo Harmonic:** TurtleBot3 there expects `geometry_msgs/msg/TwistStamped` on `/cmd_vel`; set
+  `topics.cmd_vel_type: geometry_msgs/msg/TwistStamped`. Only the Humble + Gazebo Classic setup above was recorded.
 
 No Docker? `scripts/blaxel_e2e.py` builds the same stack (ROS 2 Jazzy in an Ubuntu chroot), runs the full test
 suite against it, copies back logs and camera frames, and deletes the sandbox — that is how this repo was verified.
@@ -175,19 +218,21 @@ Everything below was actually run (logs in [`docs/verification/`](docs/verificat
 
 | Check | Result |
 |---|---|
-| `pytest tests` (interlock, mock tools, registration, imaging, rosbridge protocol against an in-process fake server) | **79 passed**, 10 skipped (live) |
+| `pytest tests` (interlock, mock tools, registration, imaging, LaserScan digest, rosbridge protocol against an in-process fake server) | **83 passed**, 10 skipped (live) |
 | Same suite + live tests against **real ROS 2 Jazzy + rosbridge_server + turtlesim** in a Blaxel sandbox (`scripts/blaxel_e2e.py`) | **85 passed**, 1 skipped (the dashboard-API test module needs fastapi, absent in the sandbox) — incl. real `Image` + `CompressedImage` snapshots, drive/stop, over-speed and geofence blocks, allowlists, e-stop latch, closed-loop drive to the cone |
 | `hermes plugins validate <clone> --install-deps` | Validation passed (all checks ✓, security scan "safe") |
 | `hermes plugins doctor <installed>` | OK: discovery, manifest, import, registration — 9 tools, 1 hook |
 | Dashboard API under the real `hermes dashboard` | `GET /api/plugins/hermes-ros/state` → 401 without the session token, 200 with it (pose, limits, blocked calls); tab rendered in a real browser (camera frame, pose, limits and blocked-call log all render, 0 console errors) |
 | `hermes plugins install arcabotai/hermes-ros` + `enable` in a throwaway `HERMES_HOME`, then a scripted `hermes chat` turn against the mock | agent snapshotted, was refused at 3 m/s / 10 s (logged in `blocked.jsonl`), retried within limits |
+| Real `hermes chat` session (claude-sonnet-4.5 via OpenRouter) driving a **TurtleBot3 waffle in Gazebo** (ROS 2 Humble, `turtlebot3_world`) over rosbridge | read `/scan` + camera, drove 0.98 m and turned ~85°, a 0.5 m/s attempt and the "2 m/s for 10 s" request were blocked by the interlock and logged; recorded as the demo video |
 
 Run the tests yourself: `pip install -r requirements-dev.txt && cd tests && python -m pytest`
 (live tests: `HERMES_ROS_LIVE=localhost:9090 python -m pytest live` against the docker demo).
 
 ## Limitations
 
-* The ROS demo camera is **synthetic** (turtlesim has none), rendered by the same raycaster as the mock. TurtleBot3/Gazebo with a real camera was not tested.
+* The docker-compose turtlesim demo camera is **synthetic** (turtlesim has none). The TurtleBot3 + Gazebo setup above uses the robot's real simulated camera and lidar; it was run on ROS 2 Humble + Gazebo Classic only (not Jazzy / Gazebo Harmonic).
+* `ros_drive` is open-loop velocity for a duration; the interlock limits speed, duration and area but does **not** avoid obstacles. Pair it with the lidar digest (or nav2) and keep limits low.
 * Plain ROS 2 over rosbridge only; no actions/nav2 tools yet, and `ros_publish` sends JSON-typed messages (no binary/large payloads).
 * The interlock is advisory against anything that can bypass the tools (see [Safety model](#safety-model)).
 

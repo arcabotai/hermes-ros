@@ -16,7 +16,8 @@ ROS_LIST = {
 
 ROS_ECHO = {
     "name": "ros_echo",
-    "description": "Read ONE message from a ROS topic and return it (large arrays/images are summarised). Read-only.",
+    "description": "Read ONE message from a ROS topic and return it (large arrays/images are summarised; a LaserScan such as /scan also gets "
+                   "`scan_summary`: nearest obstacle and the clearance in eight 45-degree sectors). Read-only.",
     "parameters": {"type": "object", "properties": {
         "topic": {"type": "string", "description": "Topic name, e.g. /odom"},
         "msg_type": {"type": "string", "description": "Optional message type; auto-detected when omitted."},
