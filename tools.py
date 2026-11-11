@@ -38,6 +38,48 @@ def summarize(obj: Any, max_str: int = 160, max_list: int = 16, depth: int = 0) 
     return obj
 
 
+_SECTORS = (("front", 0.0), ("front_left", 45.0), ("left", 90.0), ("back_left", 135.0),
+            ("back", 180.0), ("back_right", -135.0), ("right", -90.0), ("front_right", -45.0))
+
+
+def scan_summary(msg: Any) -> Optional[Dict[str, Any]]:
+    """Digest a sensor_msgs/LaserScan into what a model can use: nearest obstacle and the clearance per 45-degree sector.
+
+    Angles follow REP-103 (0 = straight ahead, + = left). Out-of-range returns (null/inf/NaN, or outside
+    [range_min, range_max]) count as "no obstacle within range_max".
+    """
+    if not isinstance(msg, dict) or not isinstance(msg.get("ranges"), list):
+        return None
+    try:
+        a0, inc = float(msg["angle_min"]), float(msg["angle_increment"])
+        rmin, rmax = float(msg.get("range_min") or 0.0), float(msg.get("range_max") or float("inf"))
+    except (KeyError, TypeError, ValueError):
+        return None
+    if not math.isfinite(a0) or not math.isfinite(inc) or inc == 0.0:
+        return None
+    pts = []
+    for i, r in enumerate(msg["ranges"]):
+        try:
+            r = float(r)
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(r) and rmin <= r <= rmax:
+            deg = math.degrees(a0 + i * inc)
+            pts.append((r, (deg + 180.0) % 360.0 - 180.0))
+    sectors: Dict[str, Any] = {}
+    for name, centre in _SECTORS:
+        near = [r for r, d in pts if abs((d - centre + 180.0) % 360.0 - 180.0) <= 22.5]
+        sectors[name] = round(min(near), 2) if near else None
+    out: Dict[str, Any] = {"beams": len(msg["ranges"]), "valid_returns": len(pts),
+                           "range_max_m": round(rmax, 2) if math.isfinite(rmax) else None,
+                           "nearest_m_by_sector": sectors,
+                           "note": "angles: 0 = straight ahead, + = left; null = nothing within range_max"}
+    if pts:
+        r, d = min(pts)
+        out["nearest"] = {"distance_m": round(r, 2), "bearing_deg": round(d, 1)}
+    return out
+
+
 def _as_float(v: Any, default: float) -> float:
     try:
         f = float(v)
@@ -132,6 +174,9 @@ def make_handlers(rt: Runtime) -> Dict[str, Callable[..., str]]:
     def ros_echo(a: Dict[str, Any]) -> str:
         topic = norm_name(a.get("topic"))
         msg = rt.backend().echo_once(topic, a.get("msg_type") or None, _as_float(a.get("timeout_s"), 5.0))
+        scan = scan_summary(msg)
+        if scan is not None:  # LaserScan: the first 16 raw ranges alone would mislead the model
+            return _ok(topic=topic, scan_summary=scan, message=summarize(msg))
         return _ok(topic=topic, message=summarize(msg))
 
     def _result_pose(label: str) -> Optional[Dict[str, Any]]:
