@@ -1,0 +1,25 @@
+# Add to ~/.hermes/config.yaml to drive a TurtleBot3 (waffle) in Gazebo over rosbridge (ROS 2 Humble).
+# Tested with turtlebot3_gazebo turtlebot3_world.launch.py + rosbridge_server on ws://localhost:9090.
+plugins:
+  entries:
+    hermes-ros:
+      settings:
+        backend: rosbridge
+        rosbridge: {host: localhost, port: 9090}
+        topics:
+          cmd_vel: /cmd_vel
+          cmd_vel_type: geometry_msgs/msg/Twist     # Humble. On Jazzy (Gazebo Harmonic) use geometry_msgs/msg/TwistStamped
+          odom: /odom
+          odom_type: nav_msgs/msg/Odometry
+          camera: /camera/image_raw                  # waffle / waffle_pi only; burger has no camera
+        camera:
+          return_mode: inline                        # hand the frame straight to a multimodal model
+        safety:
+          max_linear_mps: 0.25                       # TurtleBot3 waffle tops out at 0.26 m/s
+          max_angular_rps: 1.0
+          max_duration_s: 6.0
+          over_limit_action: block
+          geofence: {enabled: true, x_min: -2.6, x_max: 2.6, y_min: -2.6, y_max: 2.6, margin_m: 0.2}
+          write_allowlist:
+            topics: ["/cmd_vel"]
+            services: []
